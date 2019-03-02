@@ -1,16 +1,22 @@
-module Auction
+module AuctionFunctions
   ( Bid(..)
-  --, playAuction
-  --, Actions(..)
   , Player
   , AuctionResult(..)
+  , Stalemate(..)
   , AuctionStatus(..)
-  , playerBidsToStatus
+  , AuctionState(..)
+  , auctionState
+  , minus
+  , auctionStatus
+  , initialState
+  , chief
+  , Winners(..)
   ) where
 
 import           Cards
+import           Control.Monad.State.Lazy
 import           Data.List
-import qualified Data.Map.Lazy as Map
+import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 
 type Player = Int
@@ -21,73 +27,74 @@ data Bid
 
 data AuctionStatus
   = Unfinished
-  | Finished AuctionResult deriving (Eq, Show)
+  | Finished AuctionResult
+  deriving (Eq, Show)
+
+data Winners
+  = ChiefOnly Player
+  | ChiefAndVice Player
+                 Player
+  deriving (Eq, Show)
 
 data AuctionResult
+  = Result Winners
+  | NoResult Stalemate
+  deriving (Eq, Show)
+
+data Stalemate
   = EklatNoPoints
   | Eklat { atFault  :: Player
           , affected :: [Player] }
-  | ChiefAndVice Player
-                 Player
-  | ChiefOnly Player
   deriving (Eq, Show)
 
 data AuctionState = AuctionState
-  { passes      :: Int
+  { cardsInHand :: Map.Map Player [Card]
+  , passes      :: Int
   , totals      :: Map.Map Player [Card]
   , lastToRaise :: [Player]
   }
 
-data Interactions f = Interactions
-  { getBid :: Player -> f Bid
-  , endingInteractions :: EndingInteractions f
-  }
+remove :: Eq a => a -> [a] -> [a]
+remove _ [] = []
+remove x (y:ys) | x == y = ys
+                | otherwise = y:(remove x ys)
 
-data Trump = Trump
-
-data EndingInteractions f = EndingInteractions
-  { getTrump :: Player -> f Trump
-  , getPartner :: Player -> f Player
-  }
-
-data FinishedAuction = FinishedAuction
+minus :: Eq a => [a] -> [a] -> [a]
+minus xs ys = foldl (flip remove) xs ys
 
 auctionState :: AuctionState -> (Player, Bid) -> AuctionState
 auctionState state@AuctionState {passes = num} (_, Pass) =
   state {passes = num + 1}
-auctionState AuctionState {totals = totals, lastToRaise = lastToRaise} (player, Raise cards) =
+auctionState AuctionState {cardsInHand = cardsInHand, totals = totals, lastToRaise = lastToRaise} (player, Raise cards) =
   AuctionState
     { totals = Map.insertWith (++) player cards totals
     , passes = 0
     , lastToRaise = player : lastToRaise
+    , cardsInHand = Map.insertWith (flip minus) player cards cardsInHand
     }
 
-initialState = AuctionState {totals = Map.empty, lastToRaise = [], passes = 0}
+initialState :: Map.Map Player [Card] -> AuctionState
+initialState  initialHands = AuctionState {cardsInHand = initialHands, totals = Map.empty, lastToRaise = [], passes = 0}
 
-playerBidsToStatus :: [Player] -> [ Bid] -> AuctionStatus
-playerBidsToStatus players bids =
-  auctionStatus numberOfPlayers $ foldl auctionState initialState playerBids where
-  numberOfPlayers = length players
-  playerBids = cycle players `zip` bids
-
-auctionStatus :: Int -> AuctionState -> AuctionStatus
+type NumberOfPlayers = Int
+auctionStatus :: NumberOfPlayers -> AuctionState -> AuctionStatus
 auctionStatus numberOfPlayers AuctionState { totals = totals
-                                                  , passes = passes
-                                                  , lastToRaise = lastToRaise
-                                                  } =
+                                           , passes = passes
+                                           , lastToRaise = lastToRaise
+                                           } =
   if passes < numberOfPlayers
     then Unfinished
     else Finished result
   where
     result =
       case leadersInOrderOfLastRaised of
-        [] -> EklatNoPoints
+        [] -> NoResult EklatNoPoints
         [chief] ->
           case vices of
-            [vice] -> ChiefAndVice chief vice
-            _      -> ChiefOnly chief
+            [vice] -> Result (ChiefAndVice chief vice)
+            _      -> Result (ChiefOnly chief)
         lastLeaderToRaise:others ->
-          Eklat {atFault = lastLeaderToRaise, affected = others}
+          NoResult Eklat {atFault = lastLeaderToRaise, affected = others}
     bidTotals = Map.map length totals
     maxBid = maximum $ 0 : Map.elems bidTotals
     leaders = Map.keys $ Map.filter (== maxBid) bidTotals
@@ -130,19 +137,6 @@ compareBy fs a b =
 viceOrdering :: [Card] -> [Card] -> Ordering
 viceOrdering = compareBy viceComparisons
 
-playAuction :: Monad f => Interactions f -> [Player] -> f AuctionResult
-playAuction Interactions{ getBid = getBid } players =
-  play playerSequence initialState where
-    playerSequence = cycle players
-    playerNumber = length players
-    play (thisPlayer:nextPlayers) state = do
-      bid <- getBid thisPlayer
-      case status bid of
-        Finished result -> return result
-        Unfinished -> play nextPlayers $ newState bid
-      where 
-        status = auctionStatus playerNumber . newState
-        newState bid = auctionState state (thisPlayer, bid)
-
-finishAuction :: Monad f => EndingInteractions f -> AuctionResult -> f FinishedAuction
-finishAuction EndingInteractions{getTrump = getTrump} = undefined
+chief :: Winners -> Player
+chief (ChiefOnly chief')      = chief'
+chief (ChiefAndVice chief' _) = chief'
