@@ -18,12 +18,12 @@ data Suit
   | Blue
   | Yellow
   | Green
-  deriving (Enum, Eq)
+  deriving (Enum, Eq, Show)
 
 data Card = Card
   { suit :: Suit
   , rank :: Rank
-  } deriving Eq
+  } deriving (Eq, Show)
 
 points :: Rank -> Int
 points rank

@@ -1,9 +1,9 @@
 import           AuctionFunctions
 import           Cards
 import           Data.List
+import qualified Data.Map.Lazy    as Map
 import           Test.Tasty
 import           Test.Tasty.HUnit
-import qualified Data.Map.Lazy as Map
 
 main :: IO ()
 main = do
@@ -88,8 +88,8 @@ twoCardRaise = Raise [blueFive, blackOne]
 eklatCase :: TestTree
 eklatCase =
   testCase
-    "auction result should return eklat with the player at fault and the players affected"
-    $ playerBidsToStatus fivePlayers bids @?= eklat
+    "auction result should return eklat with the player at fault and the players affected" $
+  playerBidsToStatus fivePlayers bids @?= eklat
   where
     bids = singleCardRaise : singleCardRaise : fivePasses
     eklat =

@@ -3,8 +3,11 @@ module AuctionPlay
   ) where
 
 import           AuctionFunctions
+import           Cards
 import           Control.Monad.State.Lazy
-import Cards
+import Data.List.Index
+import qualified Data.Map.Lazy as Map
+import Data.Maybe
 
 data Trump
   = SuitTrump Suit
@@ -33,20 +36,23 @@ data Interactions f = Interactions
   { getBid     :: Player -> f Bid
   , getTrump   :: Player -> f Trump
   , getPartner :: Player -> f Player
-  , getStatus  :: Bid    -> f AuctionStatus
+  , getStatus  :: Bid -> f AuctionStatus
   }
-getBidIOState :: Player -> StateT AuctionState IO Bid
-getBidIOState player = StateT getBidIO where
-  getBidIO state = do
-    undefined
 
-bidding :: Monad f => (Player -> f Bid) -> (Bid -> f AuctionStatus) -> [Player] -> f AuctionResult
-bidding getBid placeBid (thisPlayer:nextPlayers) = do 
+
+
+bidding ::
+     Monad f
+  => (Player -> f Bid)
+  -> (Bid -> f AuctionStatus)
+  -> [Player]
+  -> f AuctionResult
+bidding getBid placeBid (thisPlayer:nextPlayers) = do
   bid <- getBid thisPlayer
   status <- placeBid bid
   case status of
     Finished result -> return result
-    Unfinished -> bidding getBid placeBid nextPlayers
+    Unfinished      -> bidding getBid placeBid nextPlayers
 
 getTrumps :: Monad f => (Player -> f Trump) -> Winners -> f Trumps
 getTrumps getTrump (ChiefOnly chief) = fmap SingleTrump $ getTrump chief
@@ -54,7 +60,6 @@ getTrumps getTrump (ChiefAndVice chief vice) = do
   lower <- getTrump vice
   higher <- getTrump chief
   return $ HigherLower higher lower
-
 
 auctionRound :: Monad f => Interactions f -> [Player] -> f FinishedAuction
 auctionRound Interactions { getBid = getBid
@@ -69,7 +74,7 @@ auctionRound Interactions { getBid = getBid
       teams <- getTeams getPartner (chief winners) numberOfPlayers
       return . Successful $ TrumpsAndTeams trumps teams
     NoResult stalemate -> return $ Unsuccessful stalemate
-  where 
+  where
     numberOfPlayers = length players
     playerSequence = cycle players
 
@@ -97,7 +102,6 @@ getTeams getPartner chief _ = fmap (ChiefAndPartner chief) $ getPartner chief
 --  where
 --    playerSequence = cycle players
 --    numberOfPlayers = length players
-
 --bidding ::
 --     Monad f
 --  => (Player -> f Bid)
@@ -112,4 +116,3 @@ getTeams getPartner chief _ = fmap (ChiefAndPartner chief) $ getPartner chief
 --      case status of
 --        Finished result -> return result
 --        Unfinished      -> stateful nextPlayers
-

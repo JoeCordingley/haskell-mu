@@ -50,14 +50,15 @@ data Stalemate
 data AuctionState = AuctionState
   { cardsInHand :: Map.Map Player [Card]
   , passes      :: Int
-  , totals      :: Map.Map Player [Card]
+  , cardsBid      :: Map.Map Player [Card]
   , lastToRaise :: [Player]
   }
 
 remove :: Eq a => a -> [a] -> [a]
 remove _ [] = []
-remove x (y:ys) | x == y = ys
-                | otherwise = y:(remove x ys)
+remove x (y:ys)
+  | x == y = ys
+  | otherwise = y : (remove x ys)
 
 minus :: Eq a => [a] -> [a] -> [a]
 minus xs ys = foldl (flip remove) xs ys
@@ -65,20 +66,27 @@ minus xs ys = foldl (flip remove) xs ys
 auctionState :: AuctionState -> (Player, Bid) -> AuctionState
 auctionState state@AuctionState {passes = num} (_, Pass) =
   state {passes = num + 1}
-auctionState AuctionState {cardsInHand = cardsInHand, totals = totals, lastToRaise = lastToRaise} (player, Raise cards) =
+auctionState AuctionState { cardsInHand = cardsInHand
+                          , cardsBid = cardsBid
+                          , lastToRaise = lastToRaise
+                          } (player, Raise cards) =
   AuctionState
-    { totals = Map.insertWith (++) player cards totals
+    { cardsBid = Map.insertWith (++) player cards cardsBid
     , passes = 0
     , lastToRaise = player : lastToRaise
     , cardsInHand = Map.insertWith (flip minus) player cards cardsInHand
     }
 
 initialState :: Map.Map Player [Card] -> AuctionState
-initialState  initialHands = AuctionState {cardsInHand = initialHands, totals = Map.empty, lastToRaise = [], passes = 0}
+initialState initialHands = AuctionState { cardsInHand = initialHands , cardsBid = initialHands , lastToRaise = [] , passes = 0 } 
 
 type NumberOfPlayers = Int
+
+bidTotals :: Map.Map Player [Card] -> Map.Map Player Int
+bidTotals cardsBid = Map.map length cardsBid
+
 auctionStatus :: NumberOfPlayers -> AuctionState -> AuctionStatus
-auctionStatus numberOfPlayers AuctionState { totals = totals
+auctionStatus numberOfPlayers AuctionState { cardsBid = cardsBid
                                            , passes = passes
                                            , lastToRaise = lastToRaise
                                            } =
@@ -95,15 +103,15 @@ auctionStatus numberOfPlayers AuctionState { totals = totals
             _      -> Result (ChiefOnly chief)
         lastLeaderToRaise:others ->
           NoResult Eklat {atFault = lastLeaderToRaise, affected = others}
-    bidTotals = Map.map length totals
-    maxBid = maximum $ 0 : Map.elems bidTotals
-    leaders = Map.keys $ Map.filter (== maxBid) bidTotals
+    totals = bidTotals cardsBid
+    maxBid = maximum $ 0 : Map.elems totals
+    leaders = Map.keys $ Map.filter (== maxBid) $ totals
     leadersInOrderOfLastRaised = sortOn lastToRaiseIndex leaders
     lastToRaiseIndex a = elemIndex a lastToRaise
     vices =
       case leaders of
         [leader] -> map fst . maximumsBy compareByCards $ Map.toList otherTotals
-          where otherTotals = Map.delete leader totals
+          where otherTotals = Map.delete leader cardsBid
                 compareByCards (_, as) (_, bs) = viceOrdering as bs
         _ -> []
 
@@ -136,6 +144,10 @@ compareBy fs a b =
 
 viceOrdering :: [Card] -> [Card] -> Ordering
 viceOrdering = compareBy viceComparisons
+
+validBid :: [Card] -> AuctionState -> Bool
+validBid bid state = length bid <= oneAboveMax where
+  oneAboveMax = (maximum . Map.elems . bidTotals $ cardsBid state) + 1
 
 chief :: Winners -> Player
 chief (ChiefOnly chief')      = chief'
