@@ -5,6 +5,7 @@ module AuctionFunctions
   , Stalemate(..)
   , AuctionStatus(..)
   , AuctionState(..)
+  , bidTotals
   , auctionState
   , minus
   , auctionStatus
@@ -50,7 +51,7 @@ data Stalemate
 data AuctionState = AuctionState
   { cardsInHand :: Map.Map Player [Card]
   , passes      :: Int
-  , cardsBid      :: Map.Map Player [Card]
+  , cardsBid    :: Map.Map Player [Card]
   , lastToRaise :: [Player]
   }
 
@@ -78,7 +79,13 @@ auctionState AuctionState { cardsInHand = cardsInHand
     }
 
 initialState :: Map.Map Player [Card] -> AuctionState
-initialState initialHands = AuctionState { cardsInHand = initialHands , cardsBid = initialHands , lastToRaise = [] , passes = 0 } 
+initialState initialHands =
+  AuctionState
+    { cardsInHand = initialHands
+    , cardsBid = initialHands
+    , lastToRaise = []
+    , passes = 0
+    }
 
 type NumberOfPlayers = Int
 
@@ -146,8 +153,9 @@ viceOrdering :: [Card] -> [Card] -> Ordering
 viceOrdering = compareBy viceComparisons
 
 validBid :: [Card] -> AuctionState -> Bool
-validBid bid state = length bid <= oneAboveMax where
-  oneAboveMax = (maximum . Map.elems . bidTotals $ cardsBid state) + 1
+validBid bid state = length bid <= oneAboveMax
+  where
+    oneAboveMax = (maximum . Map.elems . bidTotals $ cardsBid state) + 1
 
 chief :: Winners -> Player
 chief (ChiefOnly chief')      = chief'

@@ -5,9 +5,9 @@ module AuctionPlay
 import           AuctionFunctions
 import           Cards
 import           Control.Monad.State.Lazy
-import Data.List.Index
-import qualified Data.Map.Lazy as Map
-import Data.Maybe
+import           Data.List.Index
+import qualified Data.Map.Lazy            as Map
+import           Data.Maybe
 
 data Trump
   = SuitTrump Suit
@@ -39,8 +39,6 @@ data Interactions f = Interactions
   , getStatus  :: Bid -> f AuctionStatus
   }
 
-
-
 bidding ::
      Monad f
   => (Player -> f Bid)
@@ -62,16 +60,14 @@ getTrumps getTrump (ChiefAndVice chief vice) = do
   return $ HigherLower higher lower
 
 auctionRound :: Monad f => Interactions f -> [Player] -> f FinishedAuction
-auctionRound Interactions { getBid = getBid
-                          , getTrump = getTrump
-                          , getPartner = getPartner
-                          , getStatus = getStatus
-                          } players = do
-  result <- bidding getBid getStatus playerSequence
+auctionRound interactions players = do
+  result <-
+    bidding (getBid interactions) (getStatus interactions) playerSequence
   case result of
     Result winners -> do
-      trumps <- getTrumps getTrump winners
-      teams <- getTeams getPartner (chief winners) numberOfPlayers
+      trumps <- getTrumps (getTrump interactions) winners
+      teams <-
+        getTeams (getPartner interactions) (chief winners) numberOfPlayers
       return . Successful $ TrumpsAndTeams trumps teams
     NoResult stalemate -> return $ Unsuccessful stalemate
   where
@@ -84,8 +80,6 @@ getTeams ::
      Monad f => (Player -> f Player) -> Player -> NumberOfPlayers -> f Teams
 getTeams getPartner chief 3 = return $ ChiefAlone chief
 getTeams getPartner chief _ = fmap (ChiefAndPartner chief) $ getPartner chief
-
-
 --auctionRound :: Monad f => Interactions f -> [Player] -> f FinishedAuction
 --auctionRound Interactions { getBid = getBid
 --                          , getTrump = getTrump
