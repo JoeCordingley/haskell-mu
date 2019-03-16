@@ -1,5 +1,5 @@
 module AuctionPlay
-  (
+  ( Interactions(..)
   ) where
 
 import           AuctionFunctions
@@ -8,11 +8,6 @@ import           Control.Monad.State.Lazy
 import           Data.List.Index
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
-
-data Trump
-  = SuitTrump Suit
-  | RankTrump Int
-  | NoTrump
 
 data Trumps
   = SingleTrump Trump

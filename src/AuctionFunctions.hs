@@ -5,8 +5,10 @@ module AuctionFunctions
   , Stalemate(..)
   , AuctionStatus(..)
   , AuctionState(..)
+  , Trump(..)
   , bidTotals
   , auctionState
+  , availableTrumps
   , minus
   , auctionStatus
   , initialState
@@ -21,6 +23,12 @@ import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 
 type Player = Int
+
+data Trump
+  = SuitTrump Suit
+  | RankTrump Int
+  | NoTrump
+  deriving (Eq, Show)
 
 data Bid
   = Pass
@@ -160,3 +168,9 @@ validBid bid state = length bid <= oneAboveMax
 chief :: Winners -> Player
 chief (ChiefOnly chief')      = chief'
 chief (ChiefAndVice chief' _) = chief'
+
+availableTrumps :: [Card] -> [Trump]
+availableTrumps cards = NoTrump : cardTrumps
+  where
+    cardTrumps = nub . concatMap suitAndRank $ cards
+    suitAndRank card = [SuitTrump $ suit card, RankTrump $ rank card]

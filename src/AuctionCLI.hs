@@ -3,6 +3,7 @@ module AuctionCLI
   ) where
 
 import           AuctionFunctions
+import           AuctionPlay
 import           Cards
 import           Control.Monad.State.Lazy
 import           Data.List.Index
@@ -57,12 +58,55 @@ getBidIO player state = do
     maxBid = maximum . Map.elems . bidTotals . cardsBid $ state
 
 bidPromptString :: Player -> MaxBid -> Map.Map Int Card -> String
-bidPromptString player maxBid indexed = foldr (++) maxBidString indexStrings
+bidPromptString player maxBid indexed = maxBidLine ++ indexLines
   where
-    maxBidString =
+    maxBidLine =
       show player ++ ", you can bid a maximum of " ++ show maxBid ++ "\n"
-    indexStrings = map indexString $ Map.toList indexed
-    indexString pair = show pair ++ "\n"
+    indexLines = showOnePerLine $ Map.toList indexed
+
+showOnePerLine :: Show a => [a] -> String
+showOnePerLine as = foldr (++) "" strings
+  where
+    strings = map (addNewLine . show) as
+    addNewLine s = s ++ "\n"
+
+trumpPromptString :: Player -> Map.Map Int Trump -> String
+trumpPromptString player indexed = firstLine ++ otherLines
+  where
+    firstLine = show player ++ ", you can select from these trumps: \n"
+    otherLines = showOnePerLine $ Map.toList indexed
+
+getTrumpIO :: Player -> AuctionState -> IO Trump
+getTrumpIO player state = do
+  putStr $ prompt
+  tryTryAgain $ getTrumpMaybe indexedTrumps
+  where
+    cards = fromJust . Map.lookup player $ cardsBid state
+    indexedTrumps = Map.fromList . indexed . availableTrumps $ cards
+    prompt = trumpPromptString player indexedTrumps
+
+parseTrump :: Map.Map Int Trump -> String -> Maybe Trump
+parseTrump indexed s = do
+  i <- read s
+  Map.lookup i indexed
+
+getTrumpMaybe :: Map.Map Int Trump -> IO (Maybe Trump)
+getTrumpMaybe indexed = fmap (parseTrump indexed) getLine
+
+partnerPromptString :: Player -> Map.Map Int Player -> String
+partnerPromptString player indexed = firstLine ++ otherLines
+  where
+    firstLine = show player ++ ", you "
+    otherLines = showOnePerLine $ Map.toList indexed
+
+parsePartner :: Map.Map Int Player -> String -> Maybe Player
+parsePartner indexed s = do
+  i <- read s
+  Map.lookup i indexed
+
+getPartnerMaybe :: Map.Map Int Player -> IO (Maybe Player)
+getPartnerMaybe indexed = fmap (parsePartner indexed) getLine
+--getBidAy player = StateT (\s -> fmap (\bid -> (s,bid)) getBidIO player s)
 --parseBidString :: [(Int,Card)] ->  String -> Bid
 --parseBidString indexed s = if
 --bidPrompt :: MaxBid -> [(Int,Card)] -> IO ()
