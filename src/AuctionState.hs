@@ -37,9 +37,12 @@ data AuctionState n = AuctionState
   , lastToRaise :: [Player n]
   }
 
-data ThreePlayers 
-data FourPlayers 
-data FivePlayers 
+data ThreePlayers
+
+data FourPlayers
+
+data FivePlayers
+
 data SixPlayers
 
 data PlayerCards n where
@@ -52,49 +55,50 @@ data PlayerCards n where
     :: { playerOneOfFour :: [Card]
        , playerTwoOfFour :: [Card]
        , playerThreeOfFour :: [Card]
-       , playerFourOfFour :: [Card]} -> PlayerCards FourPlayers
-  FivePlayerCards 
+       , playerFourOfFour :: [Card]}
+    -> PlayerCards FourPlayers
+  FivePlayerCards
     :: { playerOneOfFive :: [Card]
        , playerTwoOfFive :: [Card]
        , playerThreeOfFive :: [Card]
        , playerFourOfFive :: [Card]
-       , playerFiveOfFive :: [Card]} -> PlayerCards FivePlayers
+       , playerFiveOfFive :: [Card]}
+    -> PlayerCards FivePlayers
   SixPlayerCards
     :: { playerOneOfSix :: [Card]
        , playerTwoOfSix :: [Card]
        , playerThreeOfSix :: [Card]
        , playerFourOfSix :: [Card]
        , playerFiveOfSix :: [Card]
-       , playerSixOfSix :: [Card]} -> PlayerCards SixPlayers
+       , playerSixOfSix :: [Card]}
+    -> PlayerCards SixPlayers
 
 playersCards :: Player numberOfPlayers -> PlayerCards numberOfPlayers -> [Card]
-playersCards PlayerOneOfThree = playerOneOfThree
-playersCards PlayerTwoOfThree = playerTwoOfThree
+playersCards PlayerOneOfThree   = playerOneOfThree
+playersCards PlayerTwoOfThree   = playerTwoOfThree
 playersCards PlayerThreeOfThree = playerThreeOfThree
-playersCards PlayerOneOfFour = playerOneOfFour 
-playersCards PlayerTwoOfFour = playerTwoOfFour
-playersCards PlayerThreeOfFour = playerThreeOfFour
-playersCards PlayerFourOfFour = playerFourOfFour
-playersCards PlayerOneOfFive = playerOneOfFive
-playersCards PlayerTwoOfFive = playerTwoOfFive
-playersCards PlayerThreeOfFive = playerThreeOfFive
-playersCards PlayerFourOfFive = playerFourOfFive
-playersCards PlayerFiveOfFive = playerFiveOfFive
-playersCards PlayerOneOfSix = playerOneOfSix
-playersCards PlayerTwoOfSix = playerTwoOfSix
-playersCards PlayerThreeOfSix = playerThreeOfSix
-playersCards PlayerFourOfSix = playerFourOfSix
-playersCards PlayerFiveOfSix = playerFiveOfSix
-playersCards PlayerSixOfSix = playerSixOfSix 
+playersCards PlayerOneOfFour    = playerOneOfFour
+playersCards PlayerTwoOfFour    = playerTwoOfFour
+playersCards PlayerThreeOfFour  = playerThreeOfFour
+playersCards PlayerFourOfFour   = playerFourOfFour
+playersCards PlayerOneOfFive    = playerOneOfFive
+playersCards PlayerTwoOfFive    = playerTwoOfFive
+playersCards PlayerThreeOfFive  = playerThreeOfFive
+playersCards PlayerFourOfFive   = playerFourOfFive
+playersCards PlayerFiveOfFive   = playerFiveOfFive
+playersCards PlayerOneOfSix     = playerOneOfSix
+playersCards PlayerTwoOfSix     = playerTwoOfSix
+playersCards PlayerThreeOfSix   = playerThreeOfSix
+playersCards PlayerFourOfSix    = playerFourOfSix
+playersCards PlayerFiveOfSix    = playerFiveOfSix
+playersCards PlayerSixOfSix     = playerSixOfSix
 
-auctionState ::
-     Player n -> Bid -> AuctionState n -> AuctionState n
+auctionState :: Player n -> Bid -> AuctionState n -> AuctionState n
 auctionState player Pass state = state {passes = passes state + 1}
 --auctionState player (Raise cards) state = state {cardsInHand = cardsReduced, cardsBid = cardsIncreased, lastToRaise = player: (lastToRaise state)} where
 --  cardsReduced = undefined
 --  playersHand = undefined
 --  cardsIncreased = undefined
-
 --data ThreePlayers
 --  = PlayerOneOfThree
 --  | PlayerTwoOfThree
