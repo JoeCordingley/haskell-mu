@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, RankNTypes, TemplateHaskell, StandaloneDeriving,  MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE GADTs, RankNTypes, TemplateHaskell, StandaloneDeriving,  MultiParamTypeClasses #-}
 
 
 module AuctionState
@@ -10,6 +10,7 @@ module AuctionState
 
 import           Cards
 import Control.Lens
+import Control.Applicative
 
 --data Player n where
 --  PlayerOneOfThree :: Player ThreePlayers
@@ -121,14 +122,20 @@ data PlayerMap n c where
     -> PlayerMap SixPlayers c
 
 instance Functor (PlayerMap n) where
-  fmap f (ThreePlayerMap c1 c2 c3) = ThreePlayerMap (f c1) (f c2) (f c3)
-  fmap f (FourPlayerMap c1 c2 c3 c4) = FourPlayerMap (f c1) (f c2) (f c3) (f c4)
-  fmap f (FivePlayerMap c1 c2 c3 c4 c5) = FivePlayerMap (f c1) (f c2) (f c3) (f c4) (f c5)
-  fmap f (SixPlayerMap c1 c2 c3 c4 c5 c6) = SixPlayerMap (f c1) (f c2) (f c3) (f c4) (f c5) (f c6)
+  fmap f t = runIdentity $ traverse (Identity . f) t
 
-instance Applicative (PlayerMap ThreePlayers) where
-  pure a = ThreePlayerMap{playerOneOfThree = a, playerTwoOfThree = a, playerThreeOfThree = a}
-  (ThreePlayerMap f1 f2 f3) <*> (ThreePlayerMap a1 a2 a3) = ThreePlayerMap (f1 a1) (f2 a2) (f3 a3)
+instance Foldable (PlayerMap n) where
+  foldMap f (ThreePlayerMap c1 c2 c3) = f c1 <> f c2 <> f c3
+  foldMap f (FourPlayerMap c1 c2 c3 c4) = f c1 <> f c2 <> f c3 <> f c4
+  foldMap f (FivePlayerMap c1 c2 c3 c4 c5) = f c1 <> f c2 <> f c3 <> f c4 <> f c5
+  foldMap f (SixPlayerMap c1 c2 c3 c4 c5 c6) = f c1 <> f c2 <> f c3 <> f c4 <> f c5 <> f c6
+
+instance Traversable (PlayerMap n) where
+  traverse f (ThreePlayerMap c1 c2 c3) = pure ThreePlayerMap <*> f c1 <*> f c2 <*> f c3
+  traverse f (FourPlayerMap c1 c2 c3 c4) = pure FourPlayerMap <*> f c1 <*> f c2 <*> f c3 <*> f c4
+  traverse f (FivePlayerMap c1 c2 c3 c4 c5) = pure FivePlayerMap <*> f c1 <*> f c2 <*> f c3 <*> f c4 <*> f c5
+  traverse f (SixPlayerMap c1 c2 c3 c4 c5 c6) = pure SixPlayerMap <*> f c1 <*> f c2 <*> f c3 <*> f c4 <*> f c5 <*> f c6
+
 
 
 playerMap :: Player n -> Lens' (PlayerMap n c) c
@@ -151,8 +158,8 @@ playerMap (PlayerOfSix PlayerFourOfSix) f s = fmap (\a -> s{playerFourOfSix=a}) 
 playerMap (PlayerOfSix PlayerFiveOfSix) f s = fmap (\a -> s{playerFiveOfSix=a}) (f $ playerFiveOfSix s)
 playerMap (PlayerOfSix PlayerSixOfSix) f s = fmap (\a -> s{playerSixOfSix=a}) (f $ playerSixOfSix s)
 
---playerTraversal :: Traversal' (PlayerMap n c) c
---playerTraversal f ThreePlayerMap{playerOneOfThree=p1, playerTwoOfThree=p2, playerThreeOfThree=p3} = traverse f
+playerTraversal :: Traversal' (PlayerMap n c) c
+playerTraversal = traverse 
 
 stateCardsBid :: Lens' (AuctionState n) (PlayerCards n)
 stateCardsBid f s = fmap (\a -> s{cardsBid=a}) (f $ cardsBid s)
