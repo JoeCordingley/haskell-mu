@@ -26,6 +26,7 @@ dependencies:
 - ilist
 - split
 - lens
+- semigroupoids
 
 library:
   source-dirs: src
