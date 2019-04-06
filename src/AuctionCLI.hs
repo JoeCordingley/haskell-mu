@@ -47,6 +47,15 @@ tryTryAgain f = do
 getBidMaybe :: Int -> Map.Map Int Card -> IO (Maybe Bid)
 getBidMaybe maxBid indexed = fmap (parseBid maxBid indexed) getLine
 
+findOrEmptyList :: (Ord k) => k -> Map.Map k [a] -> [a]
+findOrEmptyList = Map.findWithDefault []
+
+--getBidIO :: Player -> AuctionState -> IO Bid
+--getBidIO player state = getResponseIO prompt indexedCards where
+--  indexedCards = Map.fromList . indexed . findOrEmptyList player $ cardsInHand state
+--  prompt = bidPromptString player maxBid indexedCards
+--  maxBid = maximum . Map.elems . bidTotals . cardsBid $ state
+
 getBidIO :: Player -> AuctionState -> IO Bid
 getBidIO player state = do
   putStr $ prompt
@@ -56,6 +65,11 @@ getBidIO player state = do
     indexedCards = Map.fromList $ indexed cards
     prompt = bidPromptString player maxBid indexedCards
     maxBid = maximum . Map.elems . bidTotals . cardsBid $ state
+
+getResponseIO :: String -> Map.Map Int a -> IO a
+getResponseIO prompt indexed = do
+  putStr $ prompt
+  tryTryAgain $ getResponseMaybe indexed
 
 bidPromptString :: Player -> MaxBid -> Map.Map Int Card -> String
 bidPromptString player maxBid indexed = maxBidLine ++ indexLines
@@ -77,21 +91,27 @@ trumpPromptString player indexed = firstLine ++ otherLines
     otherLines = showOnePerLine $ Map.toList indexed
 
 getTrumpIO :: Player -> AuctionState -> IO Trump
-getTrumpIO player state = do
-  putStr $ prompt
-  tryTryAgain $ getTrumpMaybe indexedTrumps
-  where
-    cards = fromJust . Map.lookup player $ cardsBid state
-    indexedTrumps = Map.fromList . indexed . availableTrumps $ cards
-    prompt = trumpPromptString player indexedTrumps
+getTrumpIO player state = getResponseIO prompt indexedTrumps where
+  cards = findOrEmptyList player $ cardsBid state
+  indexedTrumps = Map.fromList . indexed . availableTrumps $ cards
+  prompt = trumpPromptString player indexedTrumps
 
-parseTrump :: Map.Map Int Trump -> String -> Maybe Trump
-parseTrump indexed s = do
+--getTrumpIO :: Player -> AuctionState -> IO Trump
+--getTrumpIO player state = do
+--  putStr $ prompt
+--  tryTryAgain $ getResponseMaybe indexedTrumps
+--  where
+--    cards = fromJust . Map.lookup player $ cardsBid state
+--    indexedTrumps = Map.fromList . indexed . availableTrumps $ cards
+--    prompt = trumpPromptString player indexedTrumps
+
+parseIndexed :: Map.Map Int a -> String -> Maybe a
+parseIndexed indexed s = do
   i <- read s
   Map.lookup i indexed
 
-getTrumpMaybe :: Map.Map Int Trump -> IO (Maybe Trump)
-getTrumpMaybe indexed = fmap (parseTrump indexed) getLine
+getResponseMaybe :: Map.Map Int a -> IO (Maybe a)
+getResponseMaybe indexed = fmap (parseIndexed indexed) getLine
 
 partnerPromptString :: Player -> Map.Map Int Player -> String
 partnerPromptString player indexed = firstLine ++ otherLines
@@ -106,6 +126,7 @@ parsePartner indexed s = do
 
 getPartnerMaybe :: Map.Map Int Player -> IO (Maybe Player)
 getPartnerMaybe indexed = fmap (parsePartner indexed) getLine
+
 --getBidAy player = StateT (\s -> fmap (\bid -> (s,bid)) getBidIO player s)
 --parseBidString :: [(Int,Card)] ->  String -> Bid
 --parseBidString indexed s = if
