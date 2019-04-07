@@ -37,7 +37,7 @@ emptyState = initialState Map.empty
 
 playerBidsToStatus :: [Player] -> [Bid] -> AuctionStatus
 playerBidsToStatus players bids =
-  auctionStatus numberOfPlayers $ foldl auctionState emptyState playerBids
+  auctionStatus numberOfPlayers $ foldl (\s -> \(player,bid) -> auctionState player bid s) emptyState playerBids
   where
     numberOfPlayers = length players
     playerBids = cycle players `zip` bids

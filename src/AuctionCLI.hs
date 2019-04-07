@@ -113,6 +113,11 @@ parseIndexed indexed s = do
 getResponseMaybe :: Map.Map Int a -> IO (Maybe a)
 getResponseMaybe indexed = fmap (parseIndexed indexed) getLine
 
+
+getPartnerIO :: Player -> Map.Map Int Player -> IO Player
+getPartnerIO player availablePlayers = getResponseIO prompt availablePlayers where
+  prompt = partnerPromptString player availablePlayers
+
 partnerPromptString :: Player -> Map.Map Int Player -> String
 partnerPromptString player indexed = firstLine ++ otherLines
   where

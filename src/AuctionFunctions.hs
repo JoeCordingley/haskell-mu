@@ -9,10 +9,12 @@ module AuctionFunctions
   , bidTotals
   , auctionState
   , availableTrumps
+  , cardTrumps
   , minus
   , auctionStatus
   , initialState
   , chief
+  , remove
   , Winners(..)
   ) where
 
@@ -72,28 +74,26 @@ remove x (y:ys)
 minus :: Eq a => [a] -> [a] -> [a]
 minus xs ys = foldl (flip remove) xs ys
 
-auctionState :: AuctionState -> (Player, Bid) -> AuctionState
-auctionState state@AuctionState {passes = num} (_, Pass) =
-  state {passes = num + 1}
-auctionState AuctionState { cardsInHand = cardsInHand
-                          , cardsBid = cardsBid
-                          , lastToRaise = lastToRaise
-                          } (player, Raise cards) =
-  AuctionState
-    { cardsBid = Map.insertWith (++) player cards cardsBid
-    , passes = 0
-    , lastToRaise = player : lastToRaise
-    , cardsInHand = Map.insertWith (flip minus) player cards cardsInHand
-    }
+auctionState :: Player -> Bid -> AuctionState -> AuctionState 
+auctionState _ Pass state =
+  state {passes = passes state + 1}
+auctionState player (Raise cards) state = AuctionState
+  { cardsBid = Map.insertWith (++) player cards $ cardsBid state
+  , passes = 0
+  , lastToRaise = player : lastToRaise state
+  , cardsInHand = Map.insertWith (flip minus) player cards $ cardsInHand state
+  }
+
 
 initialState :: Map.Map Player [Card] -> AuctionState
 initialState initialHands =
   AuctionState
     { cardsInHand = initialHands
-    , cardsBid = initialHands
+    , cardsBid = Map.empty
     , lastToRaise = []
     , passes = 0
     }
+
 
 type NumberOfPlayers = Int
 
@@ -169,8 +169,10 @@ chief :: Winners -> Player
 chief (ChiefOnly chief')      = chief'
 chief (ChiefAndVice chief' _) = chief'
 
+cardTrumps :: [Card] -> [Trump]
+cardTrumps cards = nub . concatMap suitAndRank $ cards where
+  suitAndRank card = [SuitTrump $ suit card, RankTrump $ rank card]
+
+
 availableTrumps :: [Card] -> [Trump]
-availableTrumps cards = NoTrump : cardTrumps
-  where
-    cardTrumps = nub . concatMap suitAndRank $ cards
-    suitAndRank card = [SuitTrump $ suit card, RankTrump $ rank card]
+availableTrumps cards = NoTrump : cardTrumps cards
