@@ -4,6 +4,7 @@ import           Data.List
 import qualified Data.Map.Lazy    as Map
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import AuctionCLI
 
 main :: IO ()
 main = do
@@ -16,6 +17,7 @@ main = do
        , unfinished
        , chiefAndVice
        , chiefOnly
+       , parseBidWorks
        ])
 
 sixtyCards :: TestTree
@@ -37,7 +39,11 @@ emptyState = initialState Map.empty
 
 playerBidsToStatus :: [Player] -> [Bid] -> AuctionStatus
 playerBidsToStatus players bids =
-  auctionStatus numberOfPlayers $ foldl (\s -> \(player,bid) -> auctionState player bid s) emptyState playerBids
+  auctionStatus numberOfPlayers $
+  foldl
+    (\s -> \(player, bid) -> auctionState player bid s)
+    emptyState
+    playerBids
   where
     numberOfPlayers = length players
     playerBids = cycle players `zip` bids
@@ -47,6 +53,14 @@ eklatNoPoints =
   testCase "five passes should be eklat no points" $
   playerBidsToStatus fivePlayers fivePasses @?=
   (Finished $ NoResult EklatNoPoints)
+
+indexedCards = Map.fromList [(0,redSeven), (1, greenSeven), (2, blackOne), (3, blueFive)]
+
+parseBidWorks :: TestTree
+parseBidWorks = testGroup "parseBid should return the bid" 
+  [ testCase "a blank string returns a pass" $ parseBid 1 Map.empty "" @?= Just Pass
+  , testCase "a single number returns a bid with that card" $ parseBid 1 indexedCards "1" @?= Just ( Raise [greenSeven])
+  ]
 
 unfinished :: TestTree
 unfinished =

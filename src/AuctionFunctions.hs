@@ -8,7 +8,6 @@ module AuctionFunctions
   , Trump(..)
   , bidTotals
   , auctionState
-  , availableTrumps
   , cardTrumps
   , minus
   , auctionStatus
@@ -34,7 +33,7 @@ data Trump
 
 data Bid
   = Pass
-  | Raise [Card]
+  | Raise [Card] deriving (Show, Eq)
 
 data AuctionStatus
   = Unfinished
@@ -74,16 +73,15 @@ remove x (y:ys)
 minus :: Eq a => [a] -> [a] -> [a]
 minus xs ys = foldl (flip remove) xs ys
 
-auctionState :: Player -> Bid -> AuctionState -> AuctionState 
-auctionState _ Pass state =
-  state {passes = passes state + 1}
-auctionState player (Raise cards) state = AuctionState
-  { cardsBid = Map.insertWith (++) player cards $ cardsBid state
-  , passes = 0
-  , lastToRaise = player : lastToRaise state
-  , cardsInHand = Map.insertWith (flip minus) player cards $ cardsInHand state
-  }
-
+auctionState :: Player -> Bid -> AuctionState -> AuctionState
+auctionState _ Pass state = state {passes = passes state + 1}
+auctionState player (Raise cards) state =
+  AuctionState
+    { cardsBid = Map.insertWith (++) player cards $ cardsBid state
+    , passes = 0
+    , lastToRaise = player : lastToRaise state
+    , cardsInHand = Map.insertWith (flip minus) player cards $ cardsInHand state
+    }
 
 initialState :: Map.Map Player [Card] -> AuctionState
 initialState initialHands =
@@ -93,7 +91,6 @@ initialState initialHands =
     , lastToRaise = []
     , passes = 0
     }
-
 
 type NumberOfPlayers = Int
 
@@ -170,9 +167,7 @@ chief (ChiefOnly chief')      = chief'
 chief (ChiefAndVice chief' _) = chief'
 
 cardTrumps :: [Card] -> [Trump]
-cardTrumps cards = nub . concatMap suitAndRank $ cards where
-  suitAndRank card = [SuitTrump $ suit card, RankTrump $ rank card]
+cardTrumps cards = nub . concatMap suitAndRank $ cards
+  where
+    suitAndRank card = [SuitTrump $ suit card, RankTrump $ rank card]
 
-
-availableTrumps :: [Card] -> [Trump]
-availableTrumps cards = NoTrump : cardTrumps cards

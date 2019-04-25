@@ -1,5 +1,6 @@
 module AuctionPlay
   ( Interactions(..)
+  , auctionRound
   ) where
 
 import           AuctionFunctions
@@ -12,23 +13,23 @@ import           Data.Maybe
 data Trumps
   = SingleTrump Trump
   | HigherLower Trump
-                Trump
+                Trump deriving Show
 
 data TrumpsAndTeams =
   TrumpsAndTeams Trumps
-                 Teams
+                 Teams deriving Show
 
 data Teams
   = ChiefAlone Player
   | ChiefAndPartner Player
-                    Player
+                    Player deriving Show
 
 data FinishedAuction
   = Successful TrumpsAndTeams
-  | Unsuccessful Stalemate
+  | Unsuccessful Stalemate deriving Show
 
 data Interactions f = Interactions
-  { getBid     :: Player -> [Card] -> f Bid
+  { getBid     :: Int -> Player -> [Card] -> f Bid
   , getTrump   :: Player -> [Trump] -> f Trump
   , getPartner :: Player -> [Player] -> f Player
   }
@@ -38,92 +39,62 @@ type NumberOfPlayers = Int
 findOrEmptyList :: (Ord k) => k -> Map.Map k [a] -> [a]
 findOrEmptyList = Map.findWithDefault []
 
---test :: StateT Int IO Int
---test = StateT x where
---  x i = do
---    putStrLn $ show i
---    return (i+1,i+1)
 bidding ::
      Monad f
   => NumberOfPlayers
-  -> (Player -> [Card] -> f Bid)
+  -> (Int -> Player -> [Card] -> f Bid)
   -> [Player]
   -> StateT AuctionState f AuctionResult
-bidding numberOfPlayers getBid (thisPlayer:nextPlayers) =  do
+bidding numberOfPlayers getBid (thisPlayer:nextPlayers) = do
   state <- get
   case auctionStatus numberOfPlayers state of
     Finished result -> return result
     Unfinished -> do
-      bid <- lift $ getBid thisPlayer cards
+      bid <- lift $ getBid maxBidAllowed thisPlayer cards
       modify $ auctionState thisPlayer bid
       bidding numberOfPlayers getBid nextPlayers
-      where cards = findOrEmptyList thisPlayer $ cardsInHand state
+      where 
+        cards = findOrEmptyList thisPlayer $ cardsInHand state
+        maxBid = maximum  (0 : (map length . Map.elems $ cardsBid state))
+        currentTotal = length . findOrEmptyList thisPlayer $ cardsBid state
+        maxBidAllowed = maxBid + 1 - currentTotal
 
---getTrumps :: Monad f => (Player -> [Trump] -> f Trump) -> [Trump] -> Winners -> f Trumps
---getTrumps getTrump (ChiefOnly chief) trumps = fmap SingleTrump $ getTrump chief trumps
---getTrumps getTrump (ChiefAndVice chief vice) = do
---  lower <- getTrump vice
---  higher <- getTrump chief
---  return $ HigherLower higher lower
---
+getTrumps ::
+     Monad f
+  => (Player -> [Trump] -> f Trump)
+  -> Winners
+  -> Map.Map Player [Card]
+  -> f Trumps
+getTrumps getTrump (ChiefOnly chief) cardsBid =
+  fmap SingleTrump . getTrump chief . cardTrumps $
+  findOrEmptyList chief cardsBid
+getTrumps getTrump (ChiefAndVice chief vice) cardsBid = do
+  viceTrump <- getTrump vice . cardTrumps $ findOrEmptyList vice cardsBid
+  chiefTrump <-
+    getTrump chief . (NoTrump :) . remove viceTrump . cardTrumps $
+    findOrEmptyList chief cardsBid
+  return $ HigherLower chiefTrump viceTrump
 
-auctionRound :: Monad f => Interactions f -> StateT AuctionState f FinishedAuction
-auctionRound interactions = do
-  players <- gets $ Map.keys . cardsInHand
-  numberOfPlayers <- return $ length players
-  result <- bidding numberOfPlayers (getBid interactions) (cycle players)
-  finalState <- get
+auctionRound ::
+     Monad f => Interactions f -> Map.Map Player [Card] -> f FinishedAuction
+auctionRound interactions startingHands = do
+  (result, state) <- runStateT bidding' $ initialState startingHands
   case result of
     Result winners -> do
-      trumps <- case winners of
-        ChiefOnly chief -> lift . fmap SingleTrump $ getTrump interactions chief  chiefTrumps 
-        ChiefAndVice chief vice -> do
-          viceTrump <- lift $ getTrump interactions vice viceTrumps
-          chiefTrump <- lift . getTrump interactions chief $ remove viceTrump chiefTrumps 
-          return $ HigherLower chiefTrump viceTrump
-            where
-              viceTrumps = cardTrumps viceCards
-              viceCards = findOrEmptyList vice $ cardsBid finalState
-      teams <- if numberOfPlayers == 3 then return . ChiefAlone $ chief' else lift $ fmap (ChiefAndPartner chief') (getPartner interactions chief' $ potentialParters winners)
+      trumps <- getTrumps (getTrump interactions) winners $ cardsBid state
+      teams <-
+        if numberOfPlayers == 3
+          then return $ ChiefAlone chief'
+          else fmap (ChiefAndPartner chief') . getPartner interactions chief' $
+               potentialPartners winners
       return . Successful $ TrumpsAndTeams trumps teams
-        where 
-          chief' = chief winners
-          potentialParters (ChiefOnly chief) = remove chief players
-          potentialParters (ChiefAndVice chief vice) = remove chief $ remove vice players
-          chiefTrumps = NoTrump : (cardTrumps chiefCards)
-          chiefCards = findOrEmptyList chief' $ cardsBid finalState
+      where chief' = chief winners
     NoResult stalemate -> return $ Unsuccessful stalemate
---    bidding = undefined
---
---type NumberOfPlayers = Int
-
---auctionRound :: Monad f => Interactions f -> [Player] -> f FinishedAuction
---auctionRound Interactions { getBid = getBid
---                          , getTrump = getTrump
---                          , getPartner = getPartner
---                          } players = do
---  result <- bidding getBid playerSequence numberOfPlayers
---  case result of
---    Result winners -> do
---      trumps <- getTrumps getTrump winners
---      teams <- getTeams getPartner chief numberOfPlayers
---      return . Successful $ TrumpsAndTeams trumps teams
---      where chief = chiefOf winners
---    NoResult stalemate -> return $ Unsuccessful stalemate
---  where
---    playerSequence = cycle players
---    numberOfPlayers = length players
---bidding ::
---     Monad f
---  => (Player -> f Bid)
---  -> [Player]
---  -> NumberOfPlayers
---  -> f AuctionResult
---bidding getBid playerSequence numberOfPlayers = play playerSequence initialState
---  where
---    play = evalStateT . stateful
---    stateful (thisPlayer:nextPlayers) = do
---      status <- StateT $ placeBid numberOfPlayers getBid thisPlayer
---      case status of
---        Finished result -> return result
---        Unfinished      -> stateful nextPlayers
+  where
+    players = Map.keys startingHands
+    numberOfPlayers = length players
+    playerSequence = cycle players
+    bidding' = bidding numberOfPlayers (getBid interactions) playerSequence
+    potentialPartners (ChiefOnly chief) = remove chief players
+    potentialPartners (ChiefAndVice chief vice) =
+      remove chief $ remove vice players
