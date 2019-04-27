@@ -1,6 +1,5 @@
 module AuctionPlaySpec
-  ( testThisWorks
-  , example1UsedAllPlays
+  ( auctionPlayTests
   ) where
 
 import           AuctionFunctions
@@ -10,8 +9,10 @@ import           Control.Monad.Except
 import           Control.Monad.State.Lazy
 import           Data.Functor.Identity
 import qualified Data.Map.Lazy            as Map
+import qualified Data.Set                 as Set
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import Control.Arrow
 
 testThisWorks :: TestTree
 testThisWorks = testCase "1 + 1" (1 + 1 @?= 3)
@@ -55,9 +56,8 @@ greenEight = Card Green 8
 
 greenSeven = Card Green 7
 
-example1InitialState :: AuctionState Player
-example1InitialState =
-  initialState $
+example1InitialHands :: Map.Map Player [Card]
+example1InitialHands = 
   Map.fromList
     [ (anna, [redSix, redTwo, redNine])
     , (beate, [blueNine])
@@ -65,6 +65,10 @@ example1InitialState =
     , (dagmar, [greenOne, blueOne, greenEight, greenSeven])
     , (emma, [redEight])
     ]
+
+example1InitialState :: AuctionState Player
+example1InitialState =
+  initialState example1InitialHands 
 
 example1Plays :: [(Player, Bid)]
 example1Plays =
@@ -93,10 +97,14 @@ type TestState = State [(Player, Bid)]
 
 type TestContext = ExceptT TestFailure TestState
 
+type TestResult = Either TestFailure
+
 data TestFailure
   = NoMoreActions
   | WrongPlayerRequested
-  | CardsNotAvailable
+  | WrongMaxRequested
+  | CardsNotAvailable deriving (Eq, Show)
+
 
 unconsState ::  State [a] (Maybe a)
 unconsState = state uncons where
@@ -119,15 +127,50 @@ nextBid correctPlayer availableCards = do
       | otherwise -> throwError WrongPlayerRequested
     Nothing -> throwError NoMoreActions
 
+
 runBiddingInTestContext ::
      AuctionState Player
   -> TestState (Either TestFailure (AuctionResult Player, AuctionState Player))
 runBiddingInTestContext =
   runExceptT . runStateT (bidding (const nextBid) players)
 
-(example1result, example1PlaysRemaining) =
-  runState (runBiddingInTestContext example1InitialState) example1Plays
+(example1Run, example1PlaysRemaining) =
+  runState (runBiddingInTestContext example1InitialState) example1Plays :: (Either TestFailure (AuctionResult Player, AuctionState Player), [(Player, Bid)])
+
+example1Result :: TestResult (AuctionResult Player)
+example1Result = right fst example1Run
+
+example1State :: TestResult (AuctionState Player)
+example1State = right snd example1Run
+
+example1CardsInHand :: TestResult (Map.Map Player [Card])
+example1CardsInHand = right cardsInHand example1State
+
+example1CardsPlayed :: TestResult (Map.Map Player [Card])
+example1CardsPlayed = right cardsBid example1State
+
+auctionPlayTests :: TestTree 
+auctionPlayTests = testGroup "AuctionPlay" [biddingTests]
+
+biddingTests :: TestTree
+biddingTests = testGroup "bidding" [example1]
+
+example1 :: TestTree
+example1 = testGroup "example1" [example1UsedAllPlays, example1WinnerTest, example1CardsLeftTest, example1CardsPlayedTest]
 
 example1UsedAllPlays :: TestTree
 example1UsedAllPlays =
-  testCase "example 1 used requested all plays" (example1PlaysRemaining @?= [])
+  testCase "requested all plays" $ example1PlaysRemaining @?= []
+
+example1WinnerTest :: TestTree
+example1WinnerTest =
+  testCase "returned dagmar as winner and conny as vice" $ example1Result @?= Right(Result (ChiefAndVice dagmar conny) )
+
+emptyPlayerMap :: Map.Map Player [Card]
+emptyPlayerMap = Map.fromList $ map (\player -> (player,[])) players
+
+example1CardsLeftTest :: TestTree
+example1CardsLeftTest = testCase "finished with no cards in hand" $ example1CardsInHand @?= Right emptyPlayerMap
+
+example1CardsPlayedTest :: TestTree
+example1CardsPlayedTest = testCase "finished with all cards played" $ right (Map.map Set.fromList) example1CardsPlayed @?= Right (Map.map Set.fromList example1InitialHands)

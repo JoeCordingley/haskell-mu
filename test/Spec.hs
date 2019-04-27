@@ -12,7 +12,7 @@ type Player = Int
 main :: IO ()
 main = do
   defaultMain $
-    testGroup "tests" [sixtyCards, auctionTests, example1UsedAllPlays]
+    testGroup "tests" [sixtyCards, auctionTests, auctionPlayTests]
 
 auctionTests :: TestTree
 auctionTests =
