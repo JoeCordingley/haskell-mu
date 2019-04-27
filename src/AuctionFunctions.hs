@@ -1,6 +1,5 @@
 module AuctionFunctions
   ( Bid(..)
-  , Player
   , AuctionResult(..)
   , Stalemate(..)
   , AuctionStatus(..)
@@ -23,7 +22,6 @@ import           Data.List
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 
-type Player = Int
 
 data Trump
   = SuitTrump Suit
@@ -33,35 +31,36 @@ data Trump
 
 data Bid
   = Pass
-  | Raise [Card] deriving (Show, Eq)
+  | Raise [Card]
+  deriving (Show, Eq)
 
-data AuctionStatus
+data AuctionStatus player
   = Unfinished
-  | Finished AuctionResult
+  | Finished (AuctionResult player)
   deriving (Eq, Show)
 
-data Winners
-  = ChiefOnly Player
-  | ChiefAndVice Player
-                 Player
+data Winners player
+  = ChiefOnly  player
+  | ChiefAndVice player
+                 player
   deriving (Eq, Show)
 
-data AuctionResult
-  = Result Winners
-  | NoResult Stalemate
+data AuctionResult player
+  = Result (Winners player)
+  | NoResult (Stalemate player)
   deriving (Eq, Show)
 
-data Stalemate
+data Stalemate player
   = EklatNoPoints
-  | Eklat { atFault  :: Player
-          , affected :: [Player] }
+  | Eklat { atFault  :: player
+          , affected :: [player] }
   deriving (Eq, Show)
 
-data AuctionState = AuctionState
-  { cardsInHand :: Map.Map Player [Card]
+data AuctionState player = AuctionState
+  { cardsInHand :: Map.Map player [Card]
   , passes      :: Int
-  , cardsBid    :: Map.Map Player [Card]
-  , lastToRaise :: [Player]
+  , cardsBid    :: Map.Map player [Card]
+  , lastToRaise :: [player]
   }
 
 remove :: Eq a => a -> [a] -> [a]
@@ -73,7 +72,7 @@ remove x (y:ys)
 minus :: Eq a => [a] -> [a] -> [a]
 minus xs ys = foldl (flip remove) xs ys
 
-auctionState :: Player -> Bid -> AuctionState -> AuctionState
+auctionState :: Ord player => player -> Bid -> AuctionState player -> AuctionState player
 auctionState _ Pass state = state {passes = passes state + 1}
 auctionState player (Raise cards) state =
   AuctionState
@@ -83,7 +82,7 @@ auctionState player (Raise cards) state =
     , cardsInHand = Map.insertWith (flip minus) player cards $ cardsInHand state
     }
 
-initialState :: Map.Map Player [Card] -> AuctionState
+initialState :: Map.Map player [Card] -> AuctionState player
 initialState initialHands =
   AuctionState
     { cardsInHand = initialHands
@@ -94,10 +93,10 @@ initialState initialHands =
 
 type NumberOfPlayers = Int
 
-bidTotals :: Map.Map Player [Card] -> Map.Map Player Int
+bidTotals :: Map.Map player [Card] -> Map.Map player Int
 bidTotals cardsBid = Map.map length cardsBid
 
-auctionStatus :: NumberOfPlayers -> AuctionState -> AuctionStatus
+auctionStatus :: Ord player => NumberOfPlayers -> AuctionState player -> AuctionStatus player
 auctionStatus numberOfPlayers AuctionState { cardsBid = cardsBid
                                            , passes = passes
                                            , lastToRaise = lastToRaise
@@ -157,12 +156,12 @@ compareBy fs a b =
 viceOrdering :: [Card] -> [Card] -> Ordering
 viceOrdering = compareBy viceComparisons
 
-validBid :: [Card] -> AuctionState -> Bool
+validBid :: [Card] -> AuctionState player -> Bool
 validBid bid state = length bid <= oneAboveMax
   where
     oneAboveMax = (maximum . Map.elems . bidTotals $ cardsBid state) + 1
 
-chief :: Winners -> Player
+chief :: Winners player -> player
 chief (ChiefOnly chief')      = chief'
 chief (ChiefAndVice chief' _) = chief'
 
@@ -170,4 +169,3 @@ cardTrumps :: [Card] -> [Trump]
 cardTrumps cards = nub . concatMap suitAndRank $ cards
   where
     suitAndRank card = [SuitTrump $ suit card, RankTrump $ rank card]
-

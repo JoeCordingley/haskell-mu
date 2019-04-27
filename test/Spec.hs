@@ -1,24 +1,28 @@
+import           AuctionCLI
 import           AuctionFunctions
 import           Cards
 import           Data.List
 import qualified Data.Map.Lazy    as Map
 import           Test.Tasty
 import           Test.Tasty.HUnit
-import AuctionCLI
+import AuctionPlaySpec
+type Player = Int
 
 main :: IO ()
 main = do
-  defaultMain
-    (testGroup
-       "tests"
-       [ sixtyCards
-       , eklatNoPoints
-       , eklatCase
-       , unfinished
-       , chiefAndVice
-       , chiefOnly
-       , parseBidWorks
-       ])
+  defaultMain $ testGroup "tests" [sixtyCards, auctionTests, example1UsedAllPlays]
+
+auctionTests :: TestTree
+auctionTests =
+  testGroup
+    "auction tests"
+    [ eklatNoPoints
+    , eklatCase
+    , unfinished
+    , chiefAndVice
+    , chiefOnly
+    , parseBidWorks
+    ]
 
 sixtyCards :: TestTree
 sixtyCards = testCase "there should be 60 cards" (length fullDeck @?= 60)
@@ -37,7 +41,7 @@ fourPasses = replicate 4 Pass
 
 emptyState = initialState Map.empty
 
-playerBidsToStatus :: [Player] -> [Bid] -> AuctionStatus
+playerBidsToStatus :: [Player] -> [Bid] -> AuctionStatus Player
 playerBidsToStatus players bids =
   auctionStatus numberOfPlayers $
   foldl
@@ -54,13 +58,18 @@ eklatNoPoints =
   playerBidsToStatus fivePlayers fivePasses @?=
   (Finished $ NoResult EklatNoPoints)
 
-indexedCards = Map.fromList [(0,redSeven), (1, greenSeven), (2, blackOne), (3, blueFive)]
+indexedCards =
+  Map.fromList [(0, redSeven), (1, greenSeven), (2, blackOne), (3, blueFive)]
 
 parseBidWorks :: TestTree
-parseBidWorks = testGroup "parseBid should return the bid" 
-  [ testCase "a blank string returns a pass" $ parseBid 1 Map.empty "" @?= Just Pass
-  , testCase "a single number returns a bid with that card" $ parseBid 1 indexedCards "1" @?= Just ( Raise [greenSeven])
-  ]
+parseBidWorks =
+  testGroup
+    "parseBid should return the bid"
+    [ testCase "a blank string returns a pass" $
+      parseBid 1 Map.empty "" @?= Just Pass
+    , testCase "a single number returns a bid with that card" $
+      parseBid 1 indexedCards "1" @?= Just (Raise [greenSeven])
+    ]
 
 unfinished :: TestTree
 unfinished =

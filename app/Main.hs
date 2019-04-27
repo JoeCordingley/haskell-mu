@@ -1,9 +1,9 @@
 module Main where
 
+import           AuctionCLI
+import           AuctionPlay
+import           Deal
 import           Lib
-import Deal
-import AuctionPlay
-import AuctionCLI
 
 main :: IO ()
 main = someFunc
@@ -13,5 +13,3 @@ fivePlayerAuction = do
   startingHands <- newFivePlayerInitialHands
   finish <- auctionRound cliInteractions startingHands
   putStrLn $ show finish
-
-

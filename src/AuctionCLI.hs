@@ -12,13 +12,14 @@ import           Data.List.Index
 import           Data.List.Split
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
-import Text.Read
+import           Text.Read
 
 type MaxBid = Int
+type Player = Int
 
 parseCommaSeparatedInts :: String -> Maybe [Int]
-parseCommaSeparatedInts "" = Just [] 
-parseCommaSeparatedInts s = traverse readMaybe $ splitOn "," s
+parseCommaSeparatedInts "" = Just []
+parseCommaSeparatedInts s  = traverse readMaybe $ splitOn "," s
 
 intsToCards :: [Int] -> Map.Map Int Card -> Maybe [Card]
 intsToCards [] _ = Just []
@@ -78,7 +79,7 @@ trumpPrompt :: Player -> String
 trumpPrompt player = show player ++ ", you can select from these trumps:\n"
 
 getTrumpCLI :: Player -> [Trump] -> IO Trump
-getTrumpCLI player = getResponseCLI (trumpPrompt player) player 
+getTrumpCLI player = getResponseCLI (trumpPrompt player) player
 
 getResponseCLI :: Show a => String -> Player -> [a] -> IO a
 getResponseCLI startingPrompt player as = do
@@ -97,14 +98,12 @@ getResponseMaybe :: Map.Map Int a -> IO (Maybe a)
 getResponseMaybe indexed = fmap (parseIndexed indexed) getLine
 
 getPartnerCLI :: Player -> [Player] -> IO Player
-getPartnerCLI player = getResponseCLI (partnerPrompt player) player 
+getPartnerCLI player = getResponseCLI (partnerPrompt player) player
 
 partnerPrompt :: Player -> String
 partnerPrompt player = show player ++ ", you can select from these players:\n"
 
-cliInteractions :: Interactions IO 
-cliInteractions = Interactions 
-  { getBid = getBidCLI
-  , getTrump = getTrumpCLI
-  , getPartner = getPartnerCLI
-  }
+cliInteractions :: Interactions IO Player
+cliInteractions =
+  Interactions
+    {getBid = getBidCLI, getTrump = getTrumpCLI, getPartner = getPartnerCLI}
