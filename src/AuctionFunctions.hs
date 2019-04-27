@@ -22,7 +22,6 @@ import           Data.List
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 
-
 data Trump
   = SuitTrump Suit
   | RankTrump Int
@@ -40,7 +39,7 @@ data AuctionStatus player
   deriving (Eq, Show)
 
 data Winners player
-  = ChiefOnly  player
+  = ChiefOnly player
   | ChiefAndVice player
                  player
   deriving (Eq, Show)
@@ -72,7 +71,8 @@ remove x (y:ys)
 minus :: Eq a => [a] -> [a] -> [a]
 minus xs ys = foldl (flip remove) xs ys
 
-auctionState :: Ord player => player -> Bid -> AuctionState player -> AuctionState player
+auctionState ::
+     Ord player => player -> Bid -> AuctionState player -> AuctionState player
 auctionState _ Pass state = state {passes = passes state + 1}
 auctionState player (Raise cards) state =
   AuctionState
@@ -96,7 +96,11 @@ type NumberOfPlayers = Int
 bidTotals :: Map.Map player [Card] -> Map.Map player Int
 bidTotals cardsBid = Map.map length cardsBid
 
-auctionStatus :: Ord player => NumberOfPlayers -> AuctionState player -> AuctionStatus player
+auctionStatus ::
+     Ord player
+  => NumberOfPlayers
+  -> AuctionState player
+  -> AuctionStatus player
 auctionStatus numberOfPlayers AuctionState { cardsBid = cardsBid
                                            , passes = passes
                                            , lastToRaise = lastToRaise

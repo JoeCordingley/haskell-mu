@@ -1,16 +1,18 @@
 import           AuctionCLI
 import           AuctionFunctions
+import           AuctionPlaySpec
 import           Cards
 import           Data.List
 import qualified Data.Map.Lazy    as Map
 import           Test.Tasty
 import           Test.Tasty.HUnit
-import AuctionPlaySpec
+
 type Player = Int
 
 main :: IO ()
 main = do
-  defaultMain $ testGroup "tests" [sixtyCards, auctionTests, example1UsedAllPlays]
+  defaultMain $
+    testGroup "tests" [sixtyCards, auctionTests, example1UsedAllPlays]
 
 auctionTests :: TestTree
 auctionTests =

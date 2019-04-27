@@ -48,18 +48,18 @@ bidding ::
      (Ord player, Monad f)
   => (Int -> player -> [Card] -> f Bid)
   -> [player]
-  -> StateT (AuctionState player ) f (AuctionResult player)
-bidding getBid players = bidding' numberOfPlayers getBid playerSequence where
-  playerSequence = cycle players 
-  numberOfPlayers = length players 
-
+  -> StateT (AuctionState player) f (AuctionResult player)
+bidding getBid players = bidding' numberOfPlayers getBid playerSequence
+  where
+    playerSequence = cycle players
+    numberOfPlayers = length players
 
 bidding' ::
      (Ord player, Monad f)
   => NumberOfPlayers
   -> (Int -> player -> [Card] -> f Bid)
   -> [player]
-  -> StateT (AuctionState player ) f (AuctionResult player)
+  -> StateT (AuctionState player) f (AuctionResult player)
 bidding' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
   state <- get
   case auctionStatus numberOfPlayers state of
@@ -74,7 +74,7 @@ bidding' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
             maxBidAllowed = maxBid + 1 - currentTotal
 
 getTrumps ::
-     (Ord player,Monad f)
+     (Ord player, Monad f)
   => (player -> [Trump] -> f Trump)
   -> Winners player
   -> Map.Map player [Card]
@@ -90,7 +90,10 @@ getTrumps getTrump (ChiefAndVice chief vice) cardsBid = do
   return $ HigherLower chiefTrump viceTrump
 
 auctionRound ::
-     (Eq player, Ord player, Monad f) => Interactions f player -> Map.Map player [Card] -> f (FinishedAuction player)
+     (Eq player, Ord player, Monad f)
+  => Interactions f player
+  -> Map.Map player [Card]
+  -> f (FinishedAuction player)
 auctionRound interactions startingHands = do
   (result, state) <- runStateT bidding' $ initialState startingHands
   case result of

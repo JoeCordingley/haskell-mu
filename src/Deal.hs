@@ -21,6 +21,5 @@ newFivePlayerAuctionState :: IO (AuctionState Player)
 newFivePlayerAuctionState =
   fmap initialState $ shuffleAndDivide [1 .. 5] fullDeck
 
-
 newFivePlayerInitialHands :: IO (Map.Map Player [Card])
 newFivePlayerInitialHands = shuffleAndDivide [1 .. 5] fullDeck

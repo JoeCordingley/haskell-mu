@@ -15,6 +15,7 @@ import           Data.Maybe
 import           Text.Read
 
 type MaxBid = Int
+
 type Player = Int
 
 parseCommaSeparatedInts :: String -> Maybe [Int]
