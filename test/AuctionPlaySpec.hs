@@ -9,7 +9,6 @@ import           Cards
 import           Control.Monad.Except
 import           Control.Monad.State.Lazy
 import           Data.Functor.Identity
-import           Data.List
 import qualified Data.Map.Lazy            as Map
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -99,12 +98,11 @@ data TestFailure
   | WrongPlayerRequested
   | CardsNotAvailable
 
-unconsState :: Monad m => StateT [a] m (Maybe a)
-unconsState = do
-  maybePair <- gets uncons
-  case maybePair of
-    Just (x, xs) -> put xs *> return (Just x)
-    Nothing      -> return Nothing
+unconsState ::  State [a] (Maybe a)
+unconsState = state uncons where
+  uncons (a:as) = (Just a,as)
+  uncons [] = (Nothing, [])
+
 
 verifyBid :: Monad m => [Card] -> Bid -> ExceptT TestFailure m Bid
 verifyBid availableCards (Raise cards)

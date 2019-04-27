@@ -28,7 +28,6 @@ dependencies:
 - lens
 - semigroupoids
 - random-shuffle
-- either
 
 library:
   source-dirs: src
