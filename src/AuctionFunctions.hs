@@ -12,7 +12,6 @@ module AuctionFunctions
   , auctionStatus
   , initialState
   , chief
-  , remove
   , Winners(..)
   ) where
 
@@ -21,6 +20,7 @@ import           Control.Monad.State.Lazy
 import           Data.List
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
+import Util
 
 data Trump
   = SuitTrump Suit
@@ -62,14 +62,6 @@ data AuctionState player = AuctionState
   , lastToRaise :: [player]
   }
 
-remove :: Eq a => a -> [a] -> [a]
-remove _ [] = []
-remove x (y:ys)
-  | x == y = ys
-  | otherwise = y : (remove x ys)
-
-minus :: Eq a => [a] -> [a] -> [a]
-minus xs ys = foldl (flip remove) xs ys
 
 auctionState ::
      Ord player => player -> Bid -> AuctionState player -> AuctionState player

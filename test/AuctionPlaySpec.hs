@@ -70,30 +70,30 @@ example1InitialState :: AuctionState Player
 example1InitialState =
   initialState example1InitialHands 
 
-example1Plays :: [(Player, Bid)]
+example1Plays :: [(Int, Player, Bid)]
 example1Plays =
-  [ (anna, Raise [redSix])
-  , (beate, Pass)
-  , (conny, Raise [yellowEight])
-  , (dagmar, Raise [greenOne, blueOne])
-  , (emma, Pass)
-  , (anna, Raise [redTwo])
-  , (beate, Raise [blueNine])
-  , (conny, Raise [greenNine, redFive])
-  , (dagmar, Pass)
-  , (emma, Raise [redEight])
-  , (anna, Raise [redNine])
-  , (beate, Pass)
-  , (conny, Pass)
-  , (dagmar, Raise [greenEight, greenSeven])
-  , (emma, Pass)
-  , (anna, Pass)
-  , (beate, Pass)
-  , (conny, Pass)
-  , (dagmar, Pass)
+  [ (1, anna, Raise [redSix])
+  , (2, beate, Pass)
+  , (2, conny, Raise [yellowEight])
+  , (2, dagmar, Raise [greenOne, blueOne])
+  , (3, emma, Pass)
+  , (2, anna, Raise [redTwo])
+  , (3, beate, Raise [blueNine])
+  , (2, conny, Raise [greenNine, redFive])
+  , (2, dagmar, Pass)
+  , (4, emma, Raise [redEight])
+  , (2, anna, Raise [redNine])
+  , (3, beate, Pass)
+  , (1, conny, Pass)
+  , (2, dagmar, Raise [greenEight, greenSeven])
+  , (4, emma, Pass)
+  , (2, anna, Pass)
+  , (4, beate, Pass)
+  , (2, conny, Pass)
+  , (1, dagmar, Pass)
   ]
 
-type TestState = State [(Player, Bid)]
+type TestState = State [(Int, Player, Bid)]
 
 type TestContext = ExceptT TestFailure TestState
 
@@ -118,24 +118,25 @@ verifyBid availableCards (Raise cards)
   | otherwise = throwError CardsNotAvailable
 verifyBid _ Pass = return Pass
 
-nextBid :: Player -> [Card] -> TestContext Bid
-nextBid correctPlayer availableCards = do
-  maybeA <- lift unconsState
-  case maybeA of
-    Just (player, bid)
-      | player == correctPlayer -> verifyBid availableCards bid
-      | otherwise -> throwError WrongPlayerRequested
-    Nothing -> throwError NoMoreActions
+verify :: Monad m => e -> Bool -> ExceptT e m ()
+verify e False = throwError e
+verify _ True = return ()
 
+nextBid :: Int -> Player -> [Card] -> TestContext Bid
+nextBid max player cards = do
+  maybeTuple <- lift unconsState
+  case maybeTuple of
+    Just (max', player', bid) -> verify WrongMaxRequested (max == max') *> verify WrongPlayerRequested (player == player') *> verifyBid cards bid
+    Nothing -> throwError NoMoreActions
 
 runBiddingInTestContext ::
      AuctionState Player
   -> TestState (Either TestFailure (AuctionResult Player, AuctionState Player))
 runBiddingInTestContext =
-  runExceptT . runStateT (bidding (const nextBid) players)
+  runExceptT . runStateT (bidding (nextBid) players)
 
 (example1Run, example1PlaysRemaining) =
-  runState (runBiddingInTestContext example1InitialState) example1Plays :: (Either TestFailure (AuctionResult Player, AuctionState Player), [(Player, Bid)])
+  runState (runBiddingInTestContext example1InitialState) example1Plays :: (Either TestFailure (AuctionResult Player, AuctionState Player), [(Int, Player, Bid)])
 
 example1Result :: TestResult (AuctionResult Player)
 example1Result = right fst example1Run

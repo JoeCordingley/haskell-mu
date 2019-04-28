@@ -53,9 +53,6 @@ tryTryAgain f = do
 getBidMaybe :: Int -> Map.Map Int Card -> IO (Maybe Bid)
 getBidMaybe maxBid indexed = fmap (parseBid maxBid indexed) getLine
 
-findOrEmptyList :: (Ord k) => k -> Map.Map k [a] -> [a]
-findOrEmptyList = Map.findWithDefault []
-
 getBidCLI :: Int -> Player -> [Card] -> IO Bid
 getBidCLI maxBid player cards = do
   putStr $ bidPromptString player maxBid indexedCards
