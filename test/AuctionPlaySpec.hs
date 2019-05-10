@@ -14,9 +14,6 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 import Control.Arrow
 
-testThisWorks :: TestTree
-testThisWorks = testCase "1 + 1" (1 + 1 @?= 3)
-
 type Player = String
 
 players :: [Player]
@@ -120,12 +117,13 @@ type TestContext = ExceptT TestFailure TestState
 
 type TestResult = Either TestFailure
 
-data TestFailure
-  = NoMoreActions
-  | WrongPlayerRequested
-  | WrongMaxRequested
-  | CardsNotAvailable deriving (Eq, Show)
+type TestFailure = String
 
+
+noMoreActions = "no more actions" 
+wrongPlayerRequested = "wrong player requested"
+wrongMaxRequested = "wrong max requested"
+cardsNotAvailable = "cards not available"
 
 unconsState ::  State [a] (Maybe a)
 unconsState = state uncons where
@@ -136,7 +134,7 @@ unconsState = state uncons where
 verifyBid :: Monad m => [Card] -> Bid -> ExceptT TestFailure m Bid
 verifyBid availableCards (Raise cards)
   | all (\x -> elem x availableCards) cards = return $ Raise cards
-  | otherwise = throwError CardsNotAvailable
+  | otherwise = throwError cardsNotAvailable
 verifyBid _ Pass = return Pass
 
 verify :: Monad m => e -> Bool -> ExceptT e m ()
@@ -147,8 +145,8 @@ nextBid :: Int -> Player -> [Card] -> TestContext Bid
 nextBid max player cards = do
   maybeTuple <- lift unconsState
   case maybeTuple of
-    Just (max', player', bid) -> verify WrongMaxRequested (max == max') *> verify WrongPlayerRequested (player == player') *> verifyBid cards bid
-    Nothing -> throwError NoMoreActions
+    Just (max', player', bid) -> verify wrongMaxRequested (max == max') *> verify wrongPlayerRequested (player == player') *> verifyBid cards bid
+    Nothing -> throwError noMoreActions
 
 runExample :: AuctionState Player -> [(Int, Player, Bid)] -> (Either TestFailure (AuctionResult Player, AuctionState Player), [(Int, Player, Bid)])
 runExample initialState plays = runState (runBiddingInTestContext initialState) plays where
@@ -176,14 +174,11 @@ auctionPlayTests = testGroup "AuctionPlay" [biddingTests]
 biddingTests :: TestTree
 biddingTests = testGroup "bidding" [example1, example3]
 
---example1 :: TestTree
---example1 = testGroup "example1" [example1UsedAllPlays, example1WinnerTest, example1CardsLeftTest, example1CardsPlayedTest]
-
 example1 :: TestTree
 example1 = exampleTest "example 1" example1InitialHands example1Plays example1Winner
 
 example3 :: TestTree
-example3 = testGroup "example2" [example3UsedAllPlays]
+example3 = exampleTest "example 3" example3InitialHands example3Plays example3ResultTest
 
 example1Winner :: TestResult (AuctionResult Player) -> TestTree
 example1Winner result = testCase "returned dagmar as winner and conny as vice" $ result @?= Right(Result (ChiefAndVice dagmar conny) )
@@ -194,14 +189,22 @@ emptyPlayerMap = Map.fromList $ map (\player -> (player,[])) players
 (example3Run, example3PlaysRemaining) =
   runExample example3InitialState example3Plays :: (Either TestFailure (AuctionResult Player, AuctionState Player), [(Int, Player, Bid)])
 
-exampleUsedAllPlays :: (Eq a, Show a) => [a] -> TestTree
-exampleUsedAllPlays plays =
-  testCase "requested all plays" $ plays @?= []
+example3ResultTest :: TestResult (AuctionResult Player) -> TestTree
+example3ResultTest testResult = testGroup "returned eklat with dagmar at fault and only anna and conny affected" [dagmarAtFault, twoAffected, annaAffected, connyAffected] where
+  dagmarAtFault = testCase "dagmar is at fault" $ testAtFault @?= Right dagmar
+  annaAffected = testCase "anna affected" $ affectedContainsAnna @?= Right True
+  connyAffected = testCase "conny affected" $ affectedContainsConny @?= Right True
+  twoAffected = testCase "two players affected" $ numberOfAffected @?= Right 2
+  testEklat = do
+    res <- testResult
+    case res of
+      NoResult (eklat@ Eklat{}) -> Right eklat
+      _ -> Left "not eklat"
+  testAffected = fmap affected testEklat
+  numberOfAffected = fmap length testAffected
+  affectedContainsAnna = fmap (elem anna) testAffected
+  affectedContainsConny = fmap (elem conny) testAffected
+  testAtFault = fmap atFault testEklat
 
-example3UsedAllPlays :: TestTree
-example3UsedAllPlays = exampleUsedAllPlays example3PlaysRemaining
-
---example2ResultTest :: TestResult (AuctionResult Player) -> TestTree
---example2ResultTest result = testGroup "returned eklat with dagmar at fault and anna and conny affected" $ [dagmarAtFault, annaAndConnyAffected] where
---  dagmarAtFault = testCase "dagmar at fault" $ atFault @?= Right
---  annaAndConnyAffected = undefined
+    
+  
