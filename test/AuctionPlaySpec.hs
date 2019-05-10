@@ -66,12 +66,19 @@ example1InitialHands =
     , (emma, [redEight])
     ]
 
+example3InitialHands :: Map.Map Player [Card] 
+example3InitialHands = Map.adjust init dagmar example1InitialHands
+
 example1InitialState :: AuctionState Player
 example1InitialState =
   initialState example1InitialHands 
 
-example1Plays :: [(Int, Player, Bid)]
-example1Plays =
+example3InitialState :: AuctionState Player
+example3InitialState =
+  initialState example3InitialHands 
+
+exampleInitialPlays :: [(Int, Player, Bid)]
+exampleInitialPlays =
   [ (1, anna, Raise [redSix])
   , (2, beate, Pass)
   , (2, conny, Raise [yellowEight])
@@ -85,13 +92,27 @@ example1Plays =
   , (2, anna, Raise [redNine])
   , (3, beate, Pass)
   , (1, conny, Pass)
-  , (2, dagmar, Raise [greenEight, greenSeven])
+  ]
+
+example1Plays :: [(Int, Player, Bid)]
+example1Plays = exampleInitialPlays ++ 
+  [ (2, dagmar, Raise [greenEight, greenSeven])
   , (4, emma, Pass)
   , (2, anna, Pass)
   , (4, beate, Pass)
   , (2, conny, Pass)
   , (1, dagmar, Pass)
   ]
+
+example3Plays = exampleInitialPlays ++ 
+  [ (2, dagmar, Raise [greenEight ])
+  , (3, emma, Pass)
+  , (1, anna, Pass)
+  , (3, beate, Pass)
+  , (1, conny, Pass)
+  , (1, dagmar, Pass)
+  ]
+
 
 type TestState = State [(Int, Player, Bid)]
 
@@ -129,49 +150,58 @@ nextBid max player cards = do
     Just (max', player', bid) -> verify WrongMaxRequested (max == max') *> verify WrongPlayerRequested (player == player') *> verifyBid cards bid
     Nothing -> throwError NoMoreActions
 
-runBiddingInTestContext ::
-     AuctionState Player
-  -> TestState (Either TestFailure (AuctionResult Player, AuctionState Player))
-runBiddingInTestContext =
-  runExceptT . runStateT (bidding (nextBid) players)
+runExample :: AuctionState Player -> [(Int, Player, Bid)] -> (Either TestFailure (AuctionResult Player, AuctionState Player), [(Int, Player, Bid)])
+runExample initialState plays = runState (runBiddingInTestContext initialState) plays where
+  runBiddingInTestContext =
+    runExceptT . runStateT (bidding (nextBid) players)
 
-(example1Run, example1PlaysRemaining) =
-  runState (runBiddingInTestContext example1InitialState) example1Plays :: (Either TestFailure (AuctionResult Player, AuctionState Player), [(Int, Player, Bid)])
-
-example1Result :: TestResult (AuctionResult Player)
-example1Result = right fst example1Run
-
-example1State :: TestResult (AuctionState Player)
-example1State = right snd example1Run
-
-example1CardsInHand :: TestResult (Map.Map Player [Card])
-example1CardsInHand = right cardsInHand example1State
-
-example1CardsPlayed :: TestResult (Map.Map Player [Card])
-example1CardsPlayed = right cardsBid example1State
+exampleTest :: String -> Map.Map Player [Card] -> [(Int, Player, Bid)] -> (TestResult (AuctionResult Player) -> TestTree) -> TestTree
+exampleTest name initialHands plays resultTest = testGroup name [usedAllPlays, resultTest result, noCardsLeft, cardsAllPlayed] where
+  usedAllPlays = testCase "requested all plays" $ playsRemaining @?= []
+  noCardsLeft = testCase "finished with no cards in hand" $ cardsInHand' @?= Right emptyPlayerMap
+  cardsAllPlayed = testCase "finished with all cards played" $ right (Map.map Set.fromList) cardsPlayed @?= Right (Map.map Set.fromList initialHands)
+  (exampleRun, playsRemaining) =
+    runExample (initialState initialHands) plays :: (Either TestFailure (AuctionResult Player, AuctionState Player), [(Int, Player, Bid)])
+  result = right fst exampleRun
+  state = right snd exampleRun
+  cardsInHand' = right cardsInHand state
+  cardsPlayed = right cardsBid state
+  runExample initialState plays = runState (runBiddingInTestContext initialState) plays 
+  runBiddingInTestContext =
+    runExceptT . runStateT (bidding (nextBid) players)
 
 auctionPlayTests :: TestTree 
 auctionPlayTests = testGroup "AuctionPlay" [biddingTests]
 
 biddingTests :: TestTree
-biddingTests = testGroup "bidding" [example1]
+biddingTests = testGroup "bidding" [example1, example3]
+
+--example1 :: TestTree
+--example1 = testGroup "example1" [example1UsedAllPlays, example1WinnerTest, example1CardsLeftTest, example1CardsPlayedTest]
 
 example1 :: TestTree
-example1 = testGroup "example1" [example1UsedAllPlays, example1WinnerTest, example1CardsLeftTest, example1CardsPlayedTest]
+example1 = exampleTest "example 1" example1InitialHands example1Plays example1Winner
 
-example1UsedAllPlays :: TestTree
-example1UsedAllPlays =
-  testCase "requested all plays" $ example1PlaysRemaining @?= []
+example3 :: TestTree
+example3 = testGroup "example2" [example3UsedAllPlays]
 
-example1WinnerTest :: TestTree
-example1WinnerTest =
-  testCase "returned dagmar as winner and conny as vice" $ example1Result @?= Right(Result (ChiefAndVice dagmar conny) )
+example1Winner :: TestResult (AuctionResult Player) -> TestTree
+example1Winner result = testCase "returned dagmar as winner and conny as vice" $ result @?= Right(Result (ChiefAndVice dagmar conny) )
 
 emptyPlayerMap :: Map.Map Player [Card]
 emptyPlayerMap = Map.fromList $ map (\player -> (player,[])) players
 
-example1CardsLeftTest :: TestTree
-example1CardsLeftTest = testCase "finished with no cards in hand" $ example1CardsInHand @?= Right emptyPlayerMap
+(example3Run, example3PlaysRemaining) =
+  runExample example3InitialState example3Plays :: (Either TestFailure (AuctionResult Player, AuctionState Player), [(Int, Player, Bid)])
 
-example1CardsPlayedTest :: TestTree
-example1CardsPlayedTest = testCase "finished with all cards played" $ right (Map.map Set.fromList) example1CardsPlayed @?= Right (Map.map Set.fromList example1InitialHands)
+exampleUsedAllPlays :: (Eq a, Show a) => [a] -> TestTree
+exampleUsedAllPlays plays =
+  testCase "requested all plays" $ plays @?= []
+
+example3UsedAllPlays :: TestTree
+example3UsedAllPlays = exampleUsedAllPlays example3PlaysRemaining
+
+--example2ResultTest :: TestResult (AuctionResult Player) -> TestTree
+--example2ResultTest result = testGroup "returned eklat with dagmar at fault and anna and conny affected" $ [dagmarAtFault, annaAndConnyAffected] where
+--  dagmarAtFault = testCase "dagmar at fault" $ atFault @?= Right
+--  annaAndConnyAffected = undefined
