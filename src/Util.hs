@@ -4,11 +4,10 @@ module Util
   , remove
   ) where
 
-import qualified Data.Map.Lazy            as Map
+import qualified Data.Map.Lazy as Map
 
 findOrEmptyList :: (Ord k) => k -> Map.Map k [a] -> [a]
 findOrEmptyList = Map.findWithDefault []
-
 
 remove :: Eq a => a -> [a] -> [a]
 remove _ [] = []

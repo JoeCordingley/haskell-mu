@@ -20,7 +20,7 @@ import           Control.Monad.State.Lazy
 import           Data.List
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
-import Util
+import           Util
 
 data Trump
   = SuitTrump Suit
@@ -61,7 +61,6 @@ data AuctionState player = AuctionState
   , cardsBid    :: Map.Map player [Card]
   , lastToRaise :: [player]
   }
-
 
 auctionState ::
      Ord player => player -> Bid -> AuctionState player -> AuctionState player

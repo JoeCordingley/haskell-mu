@@ -10,7 +10,7 @@ import           Control.Monad.State.Lazy
 import           Data.List.Index
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
-import Util
+import           Util
 
 data Trumps
   = SingleTrump Trump
@@ -41,7 +41,6 @@ data Interactions f player = Interactions
   }
 
 type NumberOfPlayers = Int
-
 
 bidding ::
      (Ord player, Monad f)
