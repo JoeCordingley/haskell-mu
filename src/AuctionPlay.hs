@@ -2,6 +2,8 @@ module AuctionPlay
   ( Interactions(..)
   , auctionRound
   , bidding
+  , Trumps(..)
+  , Trump(..)
   ) where
 
 import           AuctionFunctions
