@@ -19,14 +19,10 @@ import           Cards
 import           Control.Monad.State.Lazy
 import           Data.List
 import qualified Data.Map.Lazy            as Map
+import           Data.Map.Lazy            (Map)
 import           Data.Maybe
 import           Util
 
-data Trump
-  = SuitTrump Suit
-  | RankTrump Int
-  | NoTrump
-  deriving (Eq, Show)
 
 data Bid
   = Pass
@@ -56,9 +52,9 @@ data Stalemate player
   deriving (Eq, Show)
 
 data AuctionState player = AuctionState
-  { cardsInHand :: Map.Map player [Card]
+  { cardsInHand :: Map player [Card]
   , passes      :: Int
-  , cardsBid    :: Map.Map player [Card]
+  , cardsBid    :: Map player [Card]
   , lastToRaise :: [player]
   }
 
@@ -73,7 +69,7 @@ auctionState player (Raise cards) state =
     , cardsInHand = Map.insertWith (flip minus) player cards $ cardsInHand state
     }
 
-initialState :: Map.Map player [Card] -> AuctionState player
+initialState :: Map player [Card] -> AuctionState player
 initialState initialHands =
   AuctionState
     { cardsInHand = initialHands
@@ -84,7 +80,7 @@ initialState initialHands =
 
 type NumberOfPlayers = Int
 
-bidTotals :: Map.Map player [Card] -> Map.Map player Int
+bidTotals :: Map player [Card] -> Map player Int
 bidTotals cardsBid = Map.map length cardsBid
 
 auctionStatus ::
@@ -100,9 +96,8 @@ auctionStatus numberOfPlayers AuctionState { cardsBid = cardsBid
     then Unfinished
     else Finished result
   where
-    result =
+    result = if null lastToRaise then NoResult EklatNoPoints else
       case leadersInOrderOfLastRaised of
-        [] -> NoResult EklatNoPoints
         [chief] ->
           case vices of
             [vice] -> Result (ChiefAndVice chief vice)

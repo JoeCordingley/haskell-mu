@@ -2,9 +2,13 @@ module Util
   ( findOrEmptyList
   , minus
   , remove
+  , (.:)
   ) where
 
 import qualified Data.Map.Lazy as Map
+
+(.:) :: (c -> d) -> (a -> b -> c) -> a -> b -> d
+(.:) = (.) . (.)
 
 findOrEmptyList :: (Ord k) => k -> Map.Map k [a] -> [a]
 findOrEmptyList = Map.findWithDefault []

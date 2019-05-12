@@ -5,6 +5,8 @@ module Cards
   , Rank
   , points
   , fullDeck
+  , Trumps(..)
+  , Trump(..)
   ) where
 
 someFunc :: IO ()
@@ -52,3 +54,15 @@ deck suits =
 reducedDeck = deck reducedSuits
 
 fullDeck = deck allSuits
+
+data Trumps
+  = SingleTrump Trump
+  | HigherLower Trump
+                Trump
+  deriving (Show)
+
+data Trump
+  = SuitTrump Suit
+  | RankTrump Int
+  | NoTrump
+  deriving (Eq, Show)

@@ -14,11 +14,6 @@ import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 import           Util
 
-data Trumps
-  = SingleTrump Trump
-  | HigherLower Trump
-                Trump
-  deriving (Show)
 
 data TrumpsAndTeams player =
   TrumpsAndTeams Trumps
