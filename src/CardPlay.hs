@@ -1,6 +1,5 @@
 module CardPlay
-  ( TrickState(..)
-  , PlayableCard(..)
+  ( PlayableCard(..)
   ) where
 
 import           AuctionPlay
@@ -9,14 +8,18 @@ import           Control.Monad.State.Lazy
 import           Data.List
 import           Data.List.NonEmpty       (NonEmpty (..))
 import qualified Data.List.NonEmpty       as NE
+import           Data.Map.Lazy            (Map)
 import qualified Data.Map.Lazy            as Map
 import           Util
 
-data TrickState player = TrickState
-  { playerOrder  :: NonEmpty player
-  , cardsInHand  :: Map.Map player [Card]
-  , cardsOnTable :: Map.Map player [Card]
-  , cardLed      :: SuitLed
+data CardPlayState player = CardPlayState
+  { playerOrder   :: NonEmpty player
+  , cardPositions :: CardPositions player
+  }
+
+data CardPositions player = CardPositions
+  { cardsInHand  :: Map player [Card]
+  , cardsOnTable :: Map player [Card]
   }
 
 data PlayableCard
@@ -43,7 +46,7 @@ effectiveSuit trumps card =
     then TrumpSuit
     else NormalSuit (suit card)
 
-playableCards :: Ord player => player -> TrickState player -> [PlayableCard]
+playableCards :: Ord player => player -> CardPositions player -> [PlayableCard]
 playableCards player state =
   playerCards CardOnTable cardsOnTable ++ playerCards CardInHand cardsInHand
   where
@@ -58,7 +61,7 @@ allowedCards ::
   => Trumps
   -> SuitLed
   -> player
-  -> TrickState player
+  -> CardPositions player
   -> [PlayableCard]
 allowedCards trumps NewTrick = playableCards
 allowedCards trumps (SuitLed suit) = allowed .: playableCards
@@ -78,109 +81,91 @@ playCard ::
      (Monad f, Ord player)
   => (player -> [PlayableCard] -> f PlayableCard)
   -> Trumps
-  -> player
-  -> StateT (TrickState player) f Card
-playCard getCard trumps player = do
-  cardLed <- gets $ cardLed
-  cards <- gets $ allowedCards trumps cardLed player
-  card <- lift $ getCard player cards
-  modify $ removeCard player card
-  return $ cardOf card
-
-playCard2 ::
-     (Monad f, Ord player)
-  => (player -> [PlayableCard] -> f PlayableCard)
-  -> Trumps
-  -> TrickState player
+  -> CardPositions player
   -> SuitLed
   -> player
   -> f PlayableCard
-playCard2 getCard trumps trickState suitLed player =
-  getCard player $ allowedCards trumps suitLed player trickState
+playCard getCard trumps cardPositions suitLed player =
+  getCard player $ allowedCards trumps suitLed player cardPositions
 
 cardOf :: PlayableCard -> Card
 cardOf (CardOnTable card) = card
 cardOf (CardInHand card)  = card
 
-removeCard ::
-     (Ord player)
-  => player
-  -> PlayableCard
-  -> TrickState player
-  -> TrickState player
-removeCard player (CardOnTable card) state =
-  state
-    {cardsOnTable = Map.insertWith minus player [card] . cardsOnTable $ state}
-removeCard player (CardInHand card) state =
-  state {cardsInHand = Map.insertWith minus player [card] . cardsInHand $ state}
-
 playTrick ::
      (Monad f, Ord player)
   => (player -> [PlayableCard] -> f PlayableCard)
   -> Trumps
-  -> [player]
-  -> StateT (TrickState player) f [Card]
-playTrick getCard trumps (first:later) = do
-  firstCard <- playFirstCard getCard trumps first
-  rest <- traverse (playCard getCard trumps) later
-  return $ firstCard : rest
+  -> StateT (CardPlayState player) f (player, NonEmpty Card)
+playTrick getCard trumps = StateT playTrick'
+  where
+    playTrick' state = do
+      firstCard <- playCard' NewTrick firstPlayer
+      rest <- traverse (playCard' $ suitLedFrom firstCard) laterPlayers
+      let cards = firstCard :| rest
+          cardsAsPlayed = players `NE.zip` cards
+          playedTrick = players `NE.zip` trick
+          trick = NE.map cardOf cards
+          winner' = winner trumps playedTrick
+          wonTrick = (winner', trick)
+          newState = updateState winner' (NE.toList cardsAsPlayed) state
+      return (wonTrick, newState)
+      where
+        players = playerOrder state
+        firstPlayer = NE.head players
+        suitLedFrom = SuitLed . effectiveSuit trumps . cardOf
+        laterPlayers = NE.tail players
+        playCard' = playCard getCard trumps $ cardPositions state
 
-playTrick2 ::
+playRounds ::
      (Monad f, Ord player)
   => (player -> [PlayableCard] -> f PlayableCard)
+  -> Int
   -> Trumps
-  -> TrickState player
-  -> f (TrickState player)
-playTrick2 getCard trumps trickState = do
-  firstCard <- playFirstCard
-  rest <- playLaterCards firstCard
-  return $ updateState' firstCard rest 
+  -> CardPlayState player
+  -> f [(player, NonEmpty Card)]
+playRounds getCard numberOfRounds trumps initialState =
+  evalStateT
+    (traverse (\_ -> playTrick getCard trumps) [1 .. numberOfRounds])
+    initialState
+
+updateState ::
+     Ord player
+  => player
+  -> [(player, PlayableCard)]
+  -> CardPlayState player
+  -> CardPlayState player
+updateState winner playerCards (CardPlayState playerOrder cardPositions) =
+  CardPlayState
+    { playerOrder = newOrder winner playerOrder
+    , cardPositions = newPositions playerCards cardPositions
+    }
+
+newOrder :: Eq player => player -> NonEmpty player -> NonEmpty player
+newOrder winner' playerOrder' = playersFromWinner
   where
-    firstPlayer = NE.head $ playerOrder trickState
-    laterPlayers = NE.tail $ playerOrder trickState
-    playFirstCard = playCard2 getCard trumps trickState NewTrick firstPlayer
-    playLaterCards firstCard = traverseWith (playCard2 getCard trumps trickState (SuitLed . effectiveSuit trumps $ cardOf firstCard)) laterPlayers
-    playerCards firstCard rest = (firstPlayer, firstCard) :| rest
-    --updateState' firstCard rest = updateState trumps (playerCards firstCard rest) trickState
-    updateState' = flip (updateState trumps) trickState .: playerCards
+    players = NE.toList playerOrder'
+    numberOfPlayers = length players
+    playersFromWinner =
+      NE.fromList . take numberOfPlayers . dropWhile (/= winner') $
+      cycle players
 
-
-updateState :: Trumps -> NonEmpty (player, PlayableCard) -> TrickState player -> TrickState player
-updateState trumps playerCards = undefined
-
-
-traverseWith ::
-     (Applicative f, Traversable t) => (a -> f b) -> t a -> f (t (a, b))
-traverseWith f t = traverse (\a -> fmap (\b -> (a, b)) $ f a) t
-
---playTrick2 ::
---     (Monad f, Ord player)
---  => (player -> [PlayableCard] -> f PlayableCard)
---  -> Trumps
---  -> [player]
---  -> StateT (TrickState player) f [Card]
---playTrick2 getCard trumps (first:later)= StateT playTrick' where
---  playTrick' trickState = undefined
---  cards trickState = do
---    firstCard <- playCard2 getCard trumps trickState NewTrick first
---    rest <- traverse (playCard2 getCard trumps trickState (SuitLed . effectiveSuit trumps $ cardOf firstCard)) later
---    return $ firstCard:rest
-playFirstCard ::
-     (Monad f, Ord player)
-  => (player -> [PlayableCard] -> f PlayableCard)
-  -> Trumps
-  -> player
-  -> StateT (TrickState player) f Card
-playFirstCard getCard trumps player = do
-  card <- playCard getCard trumps player
-  setCardLed trumps card
-  return card
-
-setCardLed :: (Monad f) => Trumps -> Card -> StateT (TrickState player) f ()
-setCardLed trumps card = modify setCard
+newPositions ::
+     Ord player
+  => [(player, PlayableCard)]
+  -> CardPositions player
+  -> CardPositions player
+newPositions playedCards CardPositions { cardsInHand = cardsInHand
+                                       , cardsOnTable = cardsOnTable
+                                       } =
+  CardPositions {cardsInHand = newCardsInHand, cardsOnTable = newCardsOnTable}
   where
-    setCard state = state {cardLed = effective}
-    effective = SuitLed $ effectiveSuit trumps card
+    newCardsInHand = foldr removeInHand cardsInHand playedCards
+    newCardsOnTable = foldr removeOnTable cardsOnTable playedCards
+    removeInHand (player, (CardInHand card)) =
+      Map.insertWith minus player [card]
+    removeOnTable (player, (CardOnTable card)) =
+      Map.insertWith minus player [card]
 
 winner :: Trumps -> NonEmpty (player, Card) -> player
 winner trumps playerCards = fst $ highestEarliest comparison playerCards
