@@ -4,18 +4,17 @@ module TrickWinner
   , winner
   ) where
 
-import Cards
-import AuctionPlay
-import           Data.List.NonEmpty       (NonEmpty (..))
-import qualified Data.List.NonEmpty       as NE
+import           AuctionPlay
+import           Cards
 import           Data.List
-import Util
+import           Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
+import           Util
 
 data EffectiveSuit
   = TrumpSuit
   | NormalSuit Suit
   deriving (Eq)
-
 
 trumpsOf :: Trumps -> [Trump]
 trumpsOf (SingleTrump trump)        = [trump]

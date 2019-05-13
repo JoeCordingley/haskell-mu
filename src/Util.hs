@@ -3,6 +3,7 @@ module Util
   , minus
   , remove
   , (.:)
+  , pairWith
   ) where
 
 import qualified Data.Map.Lazy as Map
@@ -21,3 +22,6 @@ remove x (y:ys)
 
 minus :: Eq a => [a] -> [a] -> [a]
 minus xs ys = foldl (flip remove) xs ys
+
+pairWith :: b -> a -> (a, b)
+pairWith b a = (a, b)

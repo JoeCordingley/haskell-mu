@@ -4,6 +4,8 @@ module AuctionPlay
   , bidding
   , Trumps(..)
   , Trump(..)
+  , TrumpsAndTeams(..)
+  , Teams(..)
   ) where
 
 import           AuctionFunctions
@@ -13,7 +15,6 @@ import           Data.List.Index
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 import           Util
-
 
 data TrumpsAndTeams player =
   TrumpsAndTeams Trumps

@@ -18,11 +18,10 @@ module AuctionFunctions
 import           Cards
 import           Control.Monad.State.Lazy
 import           Data.List
-import qualified Data.Map.Lazy            as Map
 import           Data.Map.Lazy            (Map)
+import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 import           Util
-
 
 data Bid
   = Pass
@@ -96,14 +95,16 @@ auctionStatus numberOfPlayers AuctionState { cardsBid = cardsBid
     then Unfinished
     else Finished result
   where
-    result = if null lastToRaise then NoResult EklatNoPoints else
-      case leadersInOrderOfLastRaised of
-        [chief] ->
-          case vices of
-            [vice] -> Result (ChiefAndVice chief vice)
-            _      -> Result (ChiefOnly chief)
-        lastLeaderToRaise:others ->
-          NoResult Eklat {atFault = lastLeaderToRaise, affected = others}
+    result =
+      if null lastToRaise
+        then NoResult EklatNoPoints
+        else case leadersInOrderOfLastRaised of
+               [chief] ->
+                 case vices of
+                   [vice] -> Result (ChiefAndVice chief vice)
+                   _      -> Result (ChiefOnly chief)
+               lastLeaderToRaise:others ->
+                 NoResult Eklat {atFault = lastLeaderToRaise, affected = others}
     totals = bidTotals cardsBid
     maxBid = maximum $ 0 : Map.elems totals
     leaders = Map.keys $ Map.filter (== maxBid) $ totals

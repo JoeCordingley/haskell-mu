@@ -11,10 +11,12 @@ import           Data.List.NonEmpty       (NonEmpty (..))
 import qualified Data.List.NonEmpty       as NE
 import           Data.Map.Lazy            (Map)
 import qualified Data.Map.Lazy            as Map
+import           TrickWinner
 import           Util
-import TrickWinner 
 
-class Monad f => GetCard f where
+class Monad f =>
+      GetCard f
+  where
   getCard :: player -> [PlayableCard] -> f PlayableCard
 
 data CardPlayState player = CardPlayState
@@ -37,7 +39,6 @@ playableCards player state =
   where
     playerCards playable cards =
       map playable . findOrEmptyList player $ cards state
-
 
 allowedCards ::
      Ord player
@@ -146,4 +147,3 @@ newPositions playedCards CardPositions { cardsInHand = cardsInHand
       Map.insertWith minus player [card]
     removeOnTable (player, (CardOnTable card)) =
       Map.insertWith minus player [card]
-
