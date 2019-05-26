@@ -14,11 +14,6 @@ import qualified Data.Map.Lazy            as Map
 import           TrickWinner
 import           Util
 
-class Monad f =>
-      GetCard f
-  where
-  getCard :: player -> [PlayableCard] -> f PlayableCard
-
 data CardPlayState player = CardPlayState
   { playerOrder   :: NonEmpty player
   , cardPositions :: CardPositions player
@@ -62,13 +57,14 @@ data SuitLed
   | SuitLed EffectiveSuit
 
 playCard ::
-     (GetCard f, Ord player)
-  => Trumps
+     (Monad f, Ord player)
+  => (player -> [PlayableCard] -> f PlayableCard)
+  -> Trumps
   -> CardPositions player
   -> SuitLed
   -> player
   -> f PlayableCard
-playCard trumps cardPositions suitLed player =
+playCard getCard trumps cardPositions suitLed player =
   getCard player $ allowedCards trumps suitLed player cardPositions
 
 cardOf :: PlayableCard -> Card
@@ -76,10 +72,11 @@ cardOf (CardOnTable card) = card
 cardOf (CardInHand card)  = card
 
 playTrick ::
-     (GetCard f, Ord player)
-  => Trumps
+     (Monad f, Ord player)
+  => (player -> [PlayableCard] -> f PlayableCard)
+  -> Trumps
   -> StateT (CardPlayState player) f (player, NonEmpty Card)
-playTrick trumps = StateT playTrick'
+playTrick getCard trumps = StateT playTrick'
   where
     playTrick' state = do
       firstCard <- playCard' NewTrick firstPlayer
@@ -97,17 +94,18 @@ playTrick trumps = StateT playTrick'
         firstPlayer = NE.head players
         suitLedFrom = SuitLed . effectiveSuit trumps . cardOf
         laterPlayers = NE.tail players
-        playCard' = playCard trumps $ cardPositions state
+        playCard' = playCard getCard trumps $ cardPositions state
 
 playRounds ::
-     (GetCard f, Ord player)
-  => Int
+     (Monad f, Ord player)
+  => (player -> [PlayableCard] -> f PlayableCard)
+  -> Int
   -> Trumps
   -> CardPlayState player
   -> f [(player, NonEmpty Card)]
-playRounds numberOfRounds trumps initialState =
+playRounds getCard numberOfRounds trumps initialState =
   evalStateT
-    (traverse (\_ -> playTrick trumps) [1 .. numberOfRounds])
+    (traverse (\_ -> playTrick getCard trumps) [1 .. numberOfRounds])
     initialState
 
 updateState ::

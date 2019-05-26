@@ -1,5 +1,5 @@
 module Scoring
-  (
+  ( Scores
   ) where
 
 import           AuctionFunctions
