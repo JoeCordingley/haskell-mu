@@ -1,11 +1,8 @@
 module Scoring
   ( Scores
-<<<<<<< Updated upstream
-=======
   , FinishedRound(..)
   , CardsWon
   , scoreFinishedRound
->>>>>>> Stashed changes
   ) where
 
 import           AuctionFunctions

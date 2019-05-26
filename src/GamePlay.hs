@@ -8,11 +8,11 @@ import Control.Monad.State.Lazy
 
 data EndCondition = NumberOfRounds Int | ScoreGoal Int
 
-playUntilScore :: Monad f => f (Scores player) -> Int -> f (Scores player)
-playUntilScore playRound goal = firstMatch playRound (scoresMet goal)
+playUntilScore :: Monad f => Int -> f (Scores player) -> f (Scores player)
+playUntilScore goal playRound= firstMatch playRound (scoresMet goal)
 
-playSetNumberOfRounds :: Monad f => f (Scores player) -> Int -> f (Scores player)
-playSetNumberOfRounds playRound num = fmap last . sequence . replicate num $ playRound
+playSetNumberOfRounds :: Monad f => Int -> f (Scores player) -> f (Scores player)
+playSetNumberOfRounds num playRound = fmap last . sequence . replicate num $ playRound
 
 firstMatch :: Monad f => f a -> (a -> Bool) -> f a
 firstMatch f p = do
@@ -25,30 +25,27 @@ scoresMet goal scores = goal >= (maximum $ Map.elems scores)
 addScores :: Ord player => Scores player -> Scores player -> Scores player
 addScores = Map.unionWith (+)
 
-accumulateScores :: (Monad f, Ord player) => f (Scores player) -> StateT (Scores player) f (Scores player)
-accumulateScores playRound = do
-  scores <- lift playRound
-  modifyAndReturn $ addScores scores
-
 initialScores = Map.empty
 
-playGame :: (Ord player, Monad f) => EndCondition -> ([player] -> f (Scores player)) -> [player] -> f (Scores player)
-playGame (NumberOfRounds num) playRound players = evalStateT accumulatingScores initialScores  where
-  accumulatingScores = playSetNumberOfRounds f num
-  f = accumulateScores g
-  g = evalStateT (playRoundAndChangeOrder playRound) players
+playToTheEnd :: (Ord player, Monad f) => EndCondition -> [player] -> ([player] -> f (Scores player)) -> f (Scores player)
+playToTheEnd (NumberOfRounds num) players playRound = playToTheEnd' players playRound $ playSetNumberOfRounds num
+playToTheEnd (ScoreGoal goal) players playRound = playToTheEnd' players playRound $ playUntilScore goal
+
+playToTheEnd' players playRound finish = evalStateT stateful (players, initialScores) where
+  stateful = finish $ playRoundAndUpdate playRound
 
 
-
-
-playRoundAndChangeOrder :: (Monad f) => ([player] -> f (Scores player)) -> StateT [player] f (Scores player)
-playRoundAndChangeOrder playRound = (get >>= (lift . playRound)) <* modify rotate
+playRoundAndUpdate :: (Monad f, Ord player) => ([player] -> f (Scores player)) -> StateT ([player], Scores player) f (Scores player)
+playRoundAndUpdate playRound = do
+  (players, previousScores) <- get
+  theseScores <- lift . playRound $ players
+  let newScore = addScores previousScores theseScores
+  put (rotate players, newScore)
+  return newScore
 
 
 rotate :: [a] -> [a]
 rotate (first:rest) = rest ++ [first]
 
-modifyAndReturn :: MonadState s m => (s -> s) -> m s
-modifyAndReturn f = modify f *> get
 
 
