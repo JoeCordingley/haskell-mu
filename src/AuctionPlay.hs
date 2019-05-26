@@ -6,6 +6,7 @@ module AuctionPlay
   , Trump(..)
   , TrumpsAndTeams(..)
   , Teams(..)
+  , FinishedAuction(..)
   ) where
 
 import           AuctionFunctions

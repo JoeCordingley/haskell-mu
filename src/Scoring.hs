@@ -1,5 +1,11 @@
 module Scoring
   ( Scores
+<<<<<<< Updated upstream
+=======
+  , FinishedRound(..)
+  , CardsWon
+  , scoreFinishedRound
+>>>>>>> Stashed changes
   ) where
 
 import           AuctionFunctions
@@ -100,7 +106,7 @@ scoreFinishedRound ::
   -> CardsBid
   -> FinishedRound player
   -> Scores player
-scoreFinishedRound numberOfPlayers cardsBid (FinshedViaStalemate stalemate) =
+scoreFinishedRound numberOfPlayers cardsBid (FinishedViaStalemate stalemate) =
   stalemateScores cardsBid stalemate
 scoreFinishedRound numberOfPlayers cardsBid (FinishedViaCardPlay (TrumpsAndTeams trumps teams) cardsWon) =
   Map.unionWith (+) cardPoints bonusPoints'
@@ -116,7 +122,7 @@ chiefTrump (HigherLower higher _) = higher
 type Scores player = Map player Score
 
 data FinishedRound player
-  = FinshedViaStalemate (Stalemate player)
+  = FinishedViaStalemate (Stalemate player)
   | FinishedViaCardPlay (TrumpsAndTeams player)
                         (CardsWon player)
 
