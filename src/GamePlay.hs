@@ -66,14 +66,15 @@ rotate :: [a] -> [a]
 rotate (first:rest) = rest ++ [first]
 
 gameRound ::
-     Monad f
-  => f [(player, [Card])]
+     (Monad f, Ord player)
+  => ([player] ->  f [(player, [Card])])
   -> ([(player, [Card])] -> f (FinishedAuction player))
   -> (TrumpsAndTeams player -> f (CardsWon player))
+  -> [player]
   -> f (Scores player)
-gameRound dealCards playAuction playCards = score <$> finishedRound where
-  finishedRound = dealCards >>= playAuction >>= finishRound
-  score = undefined
+gameRound dealCards playAuction playCards players = scoreFinishedRound numberOfPlayers <$> finishedRound where
+  numberOfPlayers = length players
+  finishedRound = dealCards players >>= playAuction >>= finishRound
   finishRound (Unsuccessful stalemate) =
     return $ FinishedViaStalemate stalemate
   finishRound (Successful trumpsAndTeams) =
