@@ -117,4 +117,4 @@ eklatCase =
   where
     bids = singleCardRaise : singleCardRaise : fivePasses
     eklat =
-      Finished (NoResult (Eklat {atFault = playerTwo, affected = [playerOne]}))
+      Finished (NoResult (Eklat {atFault = playerTwo, affected = [playerOne], topBid = 1}))

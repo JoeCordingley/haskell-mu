@@ -32,9 +32,9 @@ bonusAvailable (RankTrump rank) cardsBid
   | otherwise = 20 + 10 * cardsBid
 bonusAvailable NoTrump cardsBid = 30 + 10 * cardsBid
 
-stalemateScores :: (Ord player) => CardsBid -> Stalemate player -> Scores player
-stalemateScores _ EklatNoPoints = Map.empty
-stalemateScores cardsBid Eklat {atFault = atFault, affected = affected} =
+stalemateScores :: (Ord player) => Stalemate player -> Scores player
+stalemateScores EklatNoPoints = Map.empty
+stalemateScores Eklat {atFault = atFault, affected = affected, topBid = cardsBid} =
   Map.fromList $
   (atFault, -10 * cardsBid) : map (pairWith $ 5 * cardsBid) affected
 
@@ -100,12 +100,11 @@ bonusPoints numberOfPlayers chiefTrump teams cardsBid cardPoints =
 scoreFinishedRound ::
      (Ord player)
   => NumberOfPlayers
-  -> CardsBid
   -> FinishedRound player
   -> Scores player
-scoreFinishedRound numberOfPlayers cardsBid (FinishedViaStalemate stalemate) =
-  stalemateScores cardsBid stalemate
-scoreFinishedRound numberOfPlayers cardsBid (FinishedViaCardPlay (TrumpsAndTeams trumps teams) cardsWon) =
+scoreFinishedRound numberOfPlayers (FinishedViaStalemate stalemate) =
+  stalemateScores stalemate
+scoreFinishedRound numberOfPlayers (FinishedViaCardPlay (TrumpsAndTeams trumps teams cardsBid) cardsWon) =
   Map.unionWith (+) cardPoints bonusPoints'
   where
     cardPoints = countPips cardsWon

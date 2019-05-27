@@ -47,7 +47,9 @@ data AuctionResult player
 data Stalemate player
   = EklatNoPoints
   | Eklat { atFault  :: player
-          , affected :: [player] }
+          , affected :: [player] 
+          , topBid :: Int
+          }
   deriving (Eq, Show)
 
 data AuctionState player = AuctionState
@@ -104,7 +106,7 @@ auctionStatus numberOfPlayers AuctionState { cardsBid = cardsBid
                    [vice] -> Result (ChiefAndVice chief vice)
                    _      -> Result (ChiefOnly chief)
                lastLeaderToRaise:others ->
-                 NoResult Eklat {atFault = lastLeaderToRaise, affected = others}
+                 NoResult Eklat {atFault = lastLeaderToRaise, affected = others, topBid = maxBid}
     totals = bidTotals cardsBid
     maxBid = maximum $ 0 : Map.elems totals
     leaders = Map.keys $ Map.filter (== maxBid) $ totals

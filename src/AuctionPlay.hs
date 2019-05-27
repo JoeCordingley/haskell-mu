@@ -20,7 +20,7 @@ type TopBid = Int
 
 data TrumpsAndTeams player =
   TrumpsAndTeams Trumps
-                 (Teams player)  
+                 (Teams player) TopBid
   deriving (Show)
 
 data Teams player
@@ -103,7 +103,8 @@ auctionRound interactions startingHands = do
           then return $ ChiefAlone chief'
           else fmap (ChiefAndPartner chief') . getPartner interactions chief' $
                potentialPartners winners
-      return . Successful $ TrumpsAndTeams trumps teams 
+      let topBid = undefined
+      return . Successful $ TrumpsAndTeams trumps teams topBid
       where chief' = chief winners
     NoResult stalemate -> return $ Unsuccessful stalemate
   where
