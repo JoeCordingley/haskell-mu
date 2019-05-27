@@ -8,9 +8,9 @@ import           System.Random.Shuffle
 
 type Player = Int
 
-shuffleAndDivide :: Ord a => [a] -> [b] -> IO (Map.Map a [b])
+shuffleAndDivide :: Ord a => [a] -> [b] -> IO  [( a, [b] )]
 shuffleAndDivide as =
-  fmap (Map.fromList . zip as . divideEvenly (length as)) . shuffleM
+  fmap (zip as . divideEvenly (length as)) . shuffleM
 
 divideEvenly :: Int -> [a] -> [[a]]
 divideEvenly n as = chunksOf s as
@@ -21,5 +21,5 @@ newFivePlayerAuctionState :: IO (AuctionState Player)
 newFivePlayerAuctionState =
   fmap initialState $ shuffleAndDivide [1 .. 5] fullDeck
 
-newFivePlayerInitialHands :: IO (Map.Map Player [Card])
+newFivePlayerInitialHands :: IO [(Player, [Card])]
 newFivePlayerInitialHands = shuffleAndDivide [1 .. 5] fullDeck

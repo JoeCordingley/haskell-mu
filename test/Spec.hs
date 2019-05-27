@@ -40,7 +40,7 @@ fivePasses = replicate 5 Pass
 
 fourPasses = replicate 4 Pass
 
-emptyState = initialState Map.empty
+emptyState = initialState []
 
 playerBidsToStatus :: [Player] -> [Bid] -> AuctionStatus Player
 playerBidsToStatus players bids =

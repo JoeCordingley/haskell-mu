@@ -52,7 +52,6 @@ bidding getBid players = bidding' numberOfPlayers getBid playerSequence
     playerSequence = cycle players
     numberOfPlayers = length players
 
-
 bidding' ::
      (Ord player, Monad f)
   => NumberOfPlayers
@@ -91,7 +90,7 @@ getTrumps getTrump (ChiefAndVice chief vice) cardsBid = do
 auctionRound ::
      (Eq player, Ord player, Monad f)
   => Interactions f player
-  -> Map.Map player [Card]
+  -> [(player , [Card])]
   -> f (FinishedAuction player)
 auctionRound interactions startingHands = do
   (result, state) <- runStateT bidding' $ initialState startingHands
@@ -108,7 +107,7 @@ auctionRound interactions startingHands = do
       where chief' = chief winners
     NoResult stalemate -> return $ Unsuccessful stalemate
   where
-    players = Map.keys startingHands
+    players = fst <$> startingHands
     numberOfPlayers = length players
     bidding' = bidding (getBid interactions) players
     potentialPartners (ChiefOnly chief) = remove chief players

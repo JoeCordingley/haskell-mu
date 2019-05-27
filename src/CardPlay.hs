@@ -108,6 +108,7 @@ playRounds getCard numberOfRounds trumps initialState =
     (traverse (\_ -> playTrick getCard trumps) [1 .. numberOfRounds])
     initialState
 
+
 updateState ::
      Ord player
   => player

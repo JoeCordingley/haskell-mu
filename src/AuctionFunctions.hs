@@ -70,10 +70,10 @@ auctionState player (Raise cards) state =
     , cardsInHand = Map.insertWith (flip minus) player cards $ cardsInHand state
     }
 
-initialState :: Map player [Card] -> AuctionState player
+initialState :: Ord player => [(player, [Card])] -> AuctionState player
 initialState initialHands =
   AuctionState
-    { cardsInHand = initialHands
+    { cardsInHand = Map.fromList initialHands
     , cardsBid = Map.empty
     , lastToRaise = []
     , passes = 0

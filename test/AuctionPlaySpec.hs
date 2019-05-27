@@ -67,10 +67,10 @@ example3InitialHands :: Map.Map Player [Card]
 example3InitialHands = Map.adjust init dagmar example1InitialHands
 
 example1InitialState :: AuctionState Player
-example1InitialState = initialState example1InitialHands
+example1InitialState = initialState $ Map.toList example1InitialHands
 
 example3InitialState :: AuctionState Player
-example3InitialState = initialState example3InitialHands
+example3InitialState = initialState $ Map.toList example3InitialHands
 
 exampleInitialPlays :: [(Int, Player, Bid)]
 exampleInitialPlays =
@@ -179,7 +179,7 @@ exampleTest name initialHands plays resultTest =
       testCase "finished with all cards played" $
       right (Map.map Set.fromList) cardsPlayed @?=
       Right (Map.map Set.fromList initialHands)
-    (exampleRun, playsRemaining) = runExample (initialState initialHands) plays
+    (exampleRun, playsRemaining) = runExample (initialState $ Map.toList initialHands) plays
     result = right fst exampleRun
     state = right snd exampleRun
     cardsInHand' = right cardsInHand state
