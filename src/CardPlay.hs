@@ -102,11 +102,18 @@ playRounds ::
   -> Int
   -> Trumps
   -> CardPlayState player
-  -> f [(player, NonEmpty Card)]
+  -> f (Map player [Card])
 playRounds getCard numberOfRounds trumps initialState =
-  evalStateT
+  accum <$> evalStateT
     (traverse (\_ -> playTrick getCard trumps) [1 .. numberOfRounds])
     initialState
+
+accum :: Ord player => [(player, NonEmpty Card)] -> Map player [Card]
+accum = foldr addCards Map.empty where
+  addCards (player, cards) = Map.insertWith (++) player $ NE.toList cards
+
+traverseAndFoldr :: (Foldable t, Applicative f) => (b -> c -> c) -> (a -> f b) -> c -> t a -> f c
+traverseAndFoldr f g z = foldr f' $ pure z where f' a fc = f <$> g a <*> fc
 
 
 updateState ::
