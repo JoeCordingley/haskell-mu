@@ -16,10 +16,11 @@ import           Data.List.Index
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 import           Util
+type TopBid = Int
 
 data TrumpsAndTeams player =
   TrumpsAndTeams Trumps
-                 (Teams player)
+                 (Teams player)  
   deriving (Show)
 
 data Teams player
@@ -50,6 +51,7 @@ bidding getBid players = bidding' numberOfPlayers getBid playerSequence
   where
     playerSequence = cycle players
     numberOfPlayers = length players
+
 
 bidding' ::
      (Ord player, Monad f)
@@ -101,7 +103,7 @@ auctionRound interactions startingHands = do
           then return $ ChiefAlone chief'
           else fmap (ChiefAndPartner chief') . getPartner interactions chief' $
                potentialPartners winners
-      return . Successful $ TrumpsAndTeams trumps teams
+      return . Successful $ TrumpsAndTeams trumps teams 
       where chief' = chief winners
     NoResult stalemate -> return $ Unsuccessful stalemate
   where

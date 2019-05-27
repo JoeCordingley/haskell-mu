@@ -1,23 +1,31 @@
 module GamePlay where
 
-import Scoring
-import Data.Maybe
-import Data.List
-import qualified Data.Map.Lazy as Map
-import Control.Monad.State.Lazy
+import           AuctionPlay
+import           Cards
+import           Control.Monad.State.Lazy
+import           Data.List
+import qualified Data.Map.Lazy            as Map
+import           Data.Maybe
+import           Scoring
 
-data EndCondition = NumberOfRounds Int | ScoreGoal Int
+data EndCondition
+  = NumberOfRounds Int
+  | ScoreGoal Int
 
 playUntilScore :: Monad f => Int -> f (Scores player) -> f (Scores player)
-playUntilScore goal playRound= firstMatch playRound (scoresMet goal)
+playUntilScore goal playRound = firstMatch playRound (scoresMet goal)
 
-playSetNumberOfRounds :: Monad f => Int -> f (Scores player) -> f (Scores player)
-playSetNumberOfRounds num playRound = fmap last . sequence . replicate num $ playRound
+playSetNumberOfRounds ::
+     Monad f => Int -> f (Scores player) -> f (Scores player)
+playSetNumberOfRounds num playRound =
+  fmap last . sequence . replicate num $ playRound
 
 firstMatch :: Monad f => f a -> (a -> Bool) -> f a
 firstMatch f p = do
   a <- f
-  if p a then return a else firstMatch f p
+  if p a
+    then return a
+    else firstMatch f p
 
 scoresMet :: Int -> Scores player -> Bool
 scoresMet goal scores = goal >= (maximum $ Map.elems scores)
@@ -27,15 +35,26 @@ addScores = Map.unionWith (+)
 
 initialScores = Map.empty
 
-playToTheEnd :: (Ord player, Monad f) => EndCondition -> [player] -> ([player] -> f (Scores player)) -> f (Scores player)
-playToTheEnd (NumberOfRounds num) players playRound = playToTheEnd' players playRound $ playSetNumberOfRounds num
-playToTheEnd (ScoreGoal goal) players playRound = playToTheEnd' players playRound $ playUntilScore goal
+playToTheEnd ::
+     (Ord player, Monad f)
+  => EndCondition
+  -> [player]
+  -> ([player] -> f (Scores player))
+  -> f (Scores player)
+playToTheEnd (NumberOfRounds num) players playRound =
+  playToTheEnd' players playRound $ playSetNumberOfRounds num
+playToTheEnd (ScoreGoal goal) players playRound =
+  playToTheEnd' players playRound $ playUntilScore goal
 
-playToTheEnd' players playRound finish = evalStateT stateful (players, initialScores) where
-  stateful = finish $ playRoundAndUpdate playRound
+playToTheEnd' players playRound finish =
+  evalStateT stateful (players, initialScores)
+  where
+    stateful = finish $ playRoundAndUpdate playRound
 
-
-playRoundAndUpdate :: (Monad f, Ord player) => ([player] -> f (Scores player)) -> StateT ([player], Scores player) f (Scores player)
+playRoundAndUpdate ::
+     (Monad f, Ord player)
+  => ([player] -> f (Scores player))
+  -> StateT ([player], Scores player) f (Scores player)
 playRoundAndUpdate playRound = do
   (players, previousScores) <- get
   theseScores <- lift . playRound $ players
@@ -43,9 +62,20 @@ playRoundAndUpdate playRound = do
   put (rotate players, newScore)
   return newScore
 
-
 rotate :: [a] -> [a]
 rotate (first:rest) = rest ++ [first]
 
-
+gameRound ::
+     Monad f
+  => f [(player, [Card])]
+  -> ([(player, [Card])] -> f (FinishedAuction player))
+  -> (TrumpsAndTeams player -> f (CardsWon player))
+  -> f (Scores player)
+gameRound dealCards playAuction playCards = score <$> finishedRound where
+  finishedRound = dealCards >>= playAuction >>= finishRound
+  score = undefined
+  finishRound (Unsuccessful stalemate) =
+    return $ FinishedViaStalemate stalemate
+  finishRound (Successful trumpsAndTeams) =
+    FinishedViaCardPlay trumpsAndTeams <$> playCards trumpsAndTeams
 
