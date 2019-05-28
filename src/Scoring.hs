@@ -104,7 +104,7 @@ scoreFinishedRound ::
   -> Scores player
 scoreFinishedRound numberOfPlayers (FinishedViaStalemate stalemate) =
   stalemateScores stalemate
-scoreFinishedRound numberOfPlayers (FinishedViaCardPlay (TrumpsAndTeams trumps teams cardsBid) cardsWon) =
+scoreFinishedRound numberOfPlayers (FinishedViaCardPlay (TrumpsAndTeams trumps teams cardsBid _) cardsWon) =
   Map.unionWith (+) cardPoints bonusPoints'
   where
     cardPoints = countPips cardsWon

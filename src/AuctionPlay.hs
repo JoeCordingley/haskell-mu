@@ -20,7 +20,7 @@ type TopBid = Int
 
 data TrumpsAndTeams player =
   TrumpsAndTeams Trumps
-                 (Teams player) TopBid
+                 (Teams player) TopBid (CardPositions player)
   deriving (Show)
 
 data Teams player
@@ -66,9 +66,9 @@ bidding' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
       bid <- lift $ getBid maxBidAllowed thisPlayer cards
       modify $ auctionState thisPlayer bid
       bidding' numberOfPlayers getBid nextPlayers
-      where cards = findOrEmptyList thisPlayer $ cardsInHand state
-            maxBid = maximum (0 : (map length . Map.elems $ cardsBid state))
-            currentTotal = length . findOrEmptyList thisPlayer $ cardsBid state
+      where cards = findOrEmptyList thisPlayer . cardsInHand $ auctionPositions state
+            maxBid = maximum (0 : (map length . Map.elems . cardsOnTable $ auctionPositions state))
+            currentTotal = length . findOrEmptyList thisPlayer . cardsOnTable $ auctionPositions state
             maxBidAllowed = maxBid + 1 - currentTotal
 
 getTrumps ::
@@ -95,15 +95,15 @@ auctionRound ::
 auctionRound interactions startingHands = do
   (result, state) <- runStateT bidding' $ initialState startingHands
   case result of
-    Result winners -> do
-      trumps <- getTrumps (getTrump interactions) winners $ cardsBid state
+    Result winners cardPositions -> do
+      trumps <- getTrumps (getTrump interactions) winners . cardsOnTable $ auctionPositions state
       teams <-
         if numberOfPlayers == 3
           then return $ ChiefAlone chief'
           else fmap (ChiefAndPartner chief') . getPartner interactions chief' $
                potentialPartners winners
       let topBid = undefined
-      return . Successful $ TrumpsAndTeams trumps teams topBid
+      return . Successful $ TrumpsAndTeams trumps teams topBid cardPositions
       where chief' = chief winners
     NoResult stalemate -> return $ Unsuccessful stalemate
   where

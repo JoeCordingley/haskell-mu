@@ -13,15 +13,11 @@ import           Data.Map.Lazy            (Map)
 import qualified Data.Map.Lazy            as Map
 import           TrickWinner
 import           Util
+import AuctionFunctions
 
 data CardPlayState player = CardPlayState
   { playerOrder   :: NonEmpty player
   , cardPositions :: CardPositions player
-  }
-
-data CardPositions player = CardPositions
-  { cardsInHand  :: Map player [Card]
-  , cardsOnTable :: Map player [Card]
   }
 
 data PlayableCard

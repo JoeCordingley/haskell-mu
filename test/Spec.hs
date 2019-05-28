@@ -20,8 +20,8 @@ auctionTests =
     [ eklatNoPoints
     , eklatCase
     , unfinished
-    , chiefAndVice
-    , chiefOnly
+    --, chiefAndVice
+    --, chiefOnly
     , parseBidWorks
     ]
 
@@ -77,23 +77,23 @@ unfinished =
   testCase "four passes should be unfinished" $
   playerBidsToStatus fivePlayers fourPasses @?= Unfinished
 
-chiefAndVice =
-  testCase "an uneven bid should return the chief and vice" $
-  playerBidsToStatus fivePlayers (singleCardRaise : twoCardRaise : fivePasses) @?=
-  (Finished . Result $ ChiefAndVice playerTwo playerOne)
+--chiefAndVice =
+--  testCase "an uneven bid should return the chief and vice" $
+--  playerBidsToStatus fivePlayers (singleCardRaise : twoCardRaise : fivePasses) @?=
+--  (Finished . Result $ ChiefAndVice playerTwo playerOne)
 
-chiefOnly =
-  testGroup
-    "chiefOnly"
-    [ testCase "a single bid should return a chief only" $
-      playerBidsToStatus fivePlayers (singleCardRaise : fivePasses) @?=
-      (Finished . Result $ ChiefOnly playerOne)
-    , testCase "the same card values should return no vice" $
-      playerBidsToStatus
-        fivePlayers
-        (singleCardRaise : singleCardRaise2 : twoCardRaise : fivePasses) @?=
-      (Finished . Result $ ChiefOnly playerThree)
-    ]
+--chiefOnly =
+--  testGroup
+--    "chiefOnly"
+--    [ testCase "a single bid should return a chief only" $
+--      playerBidsToStatus fivePlayers (singleCardRaise : fivePasses) @?=
+--      (Finished . Result $ ChiefOnly playerOne)
+--    , testCase "the same card values should return no vice" $
+--      playerBidsToStatus
+--        fivePlayers
+--        (singleCardRaise : singleCardRaise2 : twoCardRaise : fivePasses) @?=
+--      (Finished . Result $ ChiefOnly playerThree)
+--    ]
 
 redSeven = Card {suit = Red, rank = 7}
 

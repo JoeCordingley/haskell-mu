@@ -182,8 +182,8 @@ exampleTest name initialHands plays resultTest =
     (exampleRun, playsRemaining) = runExample (initialState $ Map.toList initialHands) plays
     result = right fst exampleRun
     state = right snd exampleRun
-    cardsInHand' = right cardsInHand state
-    cardsPlayed = right cardsBid state
+    cardsInHand' = right (cardsInHand . auctionPositions) state
+    cardsPlayed = right (cardsOnTable . auctionPositions) state
     runExample initialState plays =
       runState (runBiddingInTestContext initialState) plays
     runBiddingInTestContext = runExceptT . runStateT (bidding (nextBid) players)
@@ -205,7 +205,12 @@ example3 =
 example1Winner :: TestResult (AuctionResult Player) -> TestTree
 example1Winner result =
   testCase "returned dagmar as winner and conny as vice" $
-  result @?= Right (Result (ChiefAndVice dagmar conny))
+  testResult result @?= Right (ChiefAndVice dagmar conny)
+
+testResult :: TestResult (AuctionResult Player) -> TestResult (Winners Player)
+testResult e = e >>= winners where
+  winners (Result winners _) = Right winners
+  winners _ = Left "not a result"
 
 emptyPlayerMap :: Map.Map Player [Card]
 emptyPlayerMap = Map.fromList $ map (\player -> (player, [])) players

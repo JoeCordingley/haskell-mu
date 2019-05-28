@@ -13,6 +13,7 @@ module AuctionFunctions
   , initialState
   , chief
   , Winners(..)
+  , CardPositions(..)
   ) where
 
 import           Cards
@@ -22,11 +23,19 @@ import           Data.Map.Lazy            (Map)
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 import           Util
+import Control.Lens
 
 data Bid
   = Pass
   | Raise [Card]
   deriving (Show, Eq)
+
+
+data CardPositions player = CardPositions
+  { cardsInHand  :: Map player [Card]
+  , cardsOnTable :: Map player [Card]
+  } deriving (Eq, Show)
+
 
 data AuctionStatus player
   = Unfinished
@@ -40,7 +49,7 @@ data Winners player
   deriving (Eq, Show)
 
 data AuctionResult player
-  = Result (Winners player)
+  = Result (Winners player) (CardPositions player)
   | NoResult (Stalemate player)
   deriving (Eq, Show)
 
@@ -53,9 +62,8 @@ data Stalemate player
   deriving (Eq, Show)
 
 data AuctionState player = AuctionState
-  { cardsInHand :: Map player [Card]
+  { auctionPositions :: CardPositions player
   , passes      :: Int
-  , cardsBid    :: Map player [Card]
   , lastToRaise :: [player]
   }
 
@@ -64,17 +72,21 @@ auctionState ::
 auctionState _ Pass state = state {passes = passes state + 1}
 auctionState player (Raise cards) state =
   AuctionState
-    { cardsBid = Map.insertWith (++) player cards $ cardsBid state
+    { auctionPositions = CardPositions
+      { cardsOnTable = Map.insertWith (++) player cards . cardsOnTable $ auctionPositions state
+      , cardsInHand = Map.insertWith (flip minus) player cards . cardsInHand $ auctionPositions state
+      }
     , passes = 0
     , lastToRaise = player : lastToRaise state
-    , cardsInHand = Map.insertWith (flip minus) player cards $ cardsInHand state
     }
 
 initialState :: Ord player => [(player, [Card])] -> AuctionState player
 initialState initialHands =
   AuctionState
-    { cardsInHand = Map.fromList initialHands
-    , cardsBid = Map.empty
+    { auctionPositions = CardPositions
+      { cardsInHand = Map.fromList initialHands
+      , cardsOnTable = Map.empty
+      }
     , lastToRaise = []
     , passes = 0
     }
@@ -89,29 +101,30 @@ auctionStatus ::
   => NumberOfPlayers
   -> AuctionState player
   -> AuctionStatus player
-auctionStatus numberOfPlayers AuctionState { cardsBid = cardsBid
-                                           , passes = passes
-                                           , lastToRaise = lastToRaise
-                                           } =
-  if passes < numberOfPlayers
+auctionStatus numberOfPlayers state =
+  if passes' < numberOfPlayers
     then Unfinished
     else Finished result
   where
     result =
-      if null lastToRaise
+      if null lastToRaise'
         then NoResult EklatNoPoints
         else case leadersInOrderOfLastRaised of
                [chief] ->
                  case vices of
-                   [vice] -> Result (ChiefAndVice chief vice)
-                   _      -> Result (ChiefOnly chief)
+                   [vice] -> Result (ChiefAndVice chief vice) (cardPositions)
+                   _      -> Result (ChiefOnly chief) (cardPositions)
                lastLeaderToRaise:others ->
                  NoResult Eklat {atFault = lastLeaderToRaise, affected = others, topBid = maxBid}
+    lastToRaise' = lastToRaise state
+    passes' = passes state
     totals = bidTotals cardsBid
     maxBid = maximum $ 0 : Map.elems totals
     leaders = Map.keys $ Map.filter (== maxBid) $ totals
     leadersInOrderOfLastRaised = sortOn lastToRaiseIndex leaders
-    lastToRaiseIndex a = elemIndex a lastToRaise
+    lastToRaiseIndex a = elemIndex a lastToRaise'
+    cardPositions = auctionPositions state
+    cardsBid = cardsOnTable cardPositions
     vices =
       case leaders of
         [leader] -> map fst . maximumsBy compareByCards $ Map.toList otherTotals
@@ -152,7 +165,7 @@ viceOrdering = compareBy viceComparisons
 validBid :: [Card] -> AuctionState player -> Bool
 validBid bid state = length bid <= oneAboveMax
   where
-    oneAboveMax = (maximum . Map.elems . bidTotals $ cardsBid state) + 1
+    oneAboveMax = (maximum . Map.elems . bidTotals . cardsOnTable $ auctionPositions state) + 1
 
 chief :: Winners player -> player
 chief (ChiefOnly chief')      = chief'
