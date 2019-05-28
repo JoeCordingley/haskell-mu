@@ -30,7 +30,13 @@ data Teams player
   deriving (Show)
 
 data FinishedAuction player
-  = Successful (TrumpsAndTeams player)
+  = Successful
+  { trumpsChosen :: Trumps
+  , teamAssigned :: Teams player
+  , topBid :: Int
+  , positionsForCardPlay :: CardPositions player
+  , playerOrder :: [player]
+  }
   | Unsuccessful (Stalemate player)
   deriving (Show)
 
