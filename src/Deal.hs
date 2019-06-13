@@ -1,25 +1,22 @@
-module Deal where
+module Deal(deal, Shuffle(..)) where
 
 import           AuctionFunctions
 import           Cards
 import           Data.List.Split
 import qualified Data.Map.Lazy         as Map
-import           System.Random.Shuffle
 
 type Player = Int
-
-shuffleAndDivide :: Ord a => [a] -> [b] -> IO  [( a, [b] )]
-shuffleAndDivide as =
-  fmap (zip as . divideEvenly (length as)) . shuffleM
 
 divideEvenly :: Int -> [a] -> [[a]]
 divideEvenly n as = chunksOf s as
   where
     s = length as `div` n
 
-newFivePlayerAuctionState :: IO (AuctionState Player)
-newFivePlayerAuctionState =
-  fmap initialState $ shuffleAndDivide [1 .. 5] fullDeck
+class Functor m => Shuffle m where
+  shuffle :: [a] -> m [a]
 
-newFivePlayerInitialHands :: IO [(Player, [Card])]
-newFivePlayerInitialHands = shuffleAndDivide [1 .. 5] fullDeck
+deal :: Shuffle m => [p] -> [a] -> m [(p,[a])]
+deal players cards = zip players <$> dividedCards where
+  dividedCards = divideEvenly numberOfPlayers <$> shuffle cards
+  numberOfPlayers = length cards
+

@@ -23,6 +23,7 @@ data TrumpsAndTeams player =
                  (Teams player) TopBid (CardPositions player)
   deriving (Show)
 
+
 data Teams player
   = ChiefAlone player
   | ChiefAndPartner player
@@ -34,6 +35,7 @@ data FinishedAuction player
   | Unsuccessful (Stalemate player)
   deriving (Show)
 
+
 data Interactions f player = Interactions
   { getBid     :: Int -> player -> [Card] -> f Bid
   , getTrump   :: player -> [Trump] -> f Trump
@@ -41,6 +43,7 @@ data Interactions f player = Interactions
   }
 
 type NumberOfPlayers = Int
+
 
 bidding ::
      (Ord player, Monad f)
