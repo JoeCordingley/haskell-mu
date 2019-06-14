@@ -2,7 +2,7 @@ module Bidding
   ( InitialHands
   , MaxBid
   , Bid(..)
-  , FinishedBidding
+  , FinishedBidding(..)
   , runBidding
   ) where
 
@@ -107,5 +107,5 @@ finishBidding :: (BiddingState player) -> (FinishedBidding player)
 finishBidding state =
   FinishedBidding
     { finishedCardsInHand = cardsInHandSoFar state
-    , finishedPlayerRaises = playerRaisesSoFar state
+    , finishedPlayerRaises = reverse $ playerRaisesSoFar state
     }

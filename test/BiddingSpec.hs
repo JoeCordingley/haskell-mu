@@ -6,6 +6,7 @@ import           Bidding
 import           Cards
 import           Control.Monad.Writer.Lazy
 import           Data.List
+import           Data.Maybe
 import           Deal
 import           Test.Tasty
 import           Test.Tasty.QuickCheck     hiding (shuffle)
@@ -16,7 +17,81 @@ import           Data.Map.Lazy (Map)
 import           Control.Monad.State.Lazy
 
 biddingProperties :: TestTree
-biddingProperties = testGroup "Bidding" [playersAskedInSequence, playEndsAfterFullSequenceOfPasses, playersGivenCorrectMaximum]
+biddingProperties = testGroup "Bidding" [playersAskedInSequence, playEndsAfterFullSequenceOfPasses, playersGivenCorrectMaximum, playersRequestFromCardsLeft, biddingReturnsRaisesInOrder, biddingReturnsTheCardsLeftInHand ]
+
+playersAskedInSequence :: TestTree
+playersAskedInSequence =
+  testProperty "players asked in turn starting from first player" $
+  forAll biddingPlayers playersAskedInSequence'
+  where
+    playersAskedInSequence' (initialPlayerSequence, playersAskedInTurn) =
+      playersAskedInTurn `isPrefixOf` (cycle initialPlayerSequence)
+
+playEndsAfterFullSequenceOfPasses :: TestTree
+playEndsAfterFullSequenceOfPasses = testProperty "play ends after first full sequence of passes" $ forAll biddingBids playEndsAfterFullSequenceOfPasses' where
+  playEndsAfterFullSequenceOfPasses' (numberOfPlayers, bids) = indexAtLastPass == Just(length bids) where 
+    indexAtLastPass = indexAtLastPass' 1 0 bids 
+    indexAtLastPass' _ _ [] = Nothing
+    indexAtLastPass' index _ (Raise _ : rest) = indexAtLastPass' (index+1) 0 rest
+    indexAtLastPass' index passes (Pass: rest) = if passes +1 == numberOfPlayers then Just index else indexAtLastPass' (index + 1) (passes + 1) rest
+
+playersGivenCorrectMaximum :: TestTree
+playersGivenCorrectMaximum = testProperty "players given a maximum that would take them one ahead of current max" $ forAll maxBidGen allMaxesAreCorrect where
+  allMaxesAreCorrect = all maxIsCorrect
+  maxIsCorrect (maxBid, topTotal, playerTotal) = playerTotal + maxBid == topTotal + 1
+
+playersRequestFromCardsLeft :: TestTree
+playersRequestFromCardsLeft = testProperty "players asked to choose from the cards left in their hand" $ forAll cardsLeftGen cardRequestsAllCorrect where
+  cardRequestsAllCorrect (initialHands, requests) = all (requestIsCorrect initialHands) requests
+  requestIsCorrect initialHands (player, cardsRequested, cardsBidSoFar) = cardsRequested `containsTheSameElementsAs` (findOrEmptyList player initialHands `minus` cardsBidSoFar)
+
+biddingReturnsRaisesInOrder :: TestTree
+biddingReturnsRaisesInOrder = testProperty "bidding returns the player raises in the order they occurred" $ forAll returnedRaisesGen raisesRecorded where
+  raisesRecorded (raises, playerBids) = raisesOf playerBids == raises
+
+raisesOf :: [(Player, Bid)] -> [(Player, [Card])]
+raisesOf = catMaybes . map playerRaise where
+  playerRaise (player , bid) = (\raise -> (player, raise)) <$> raise bid
+  raise Pass = Nothing
+  raise (Raise cards) = Just cards
+
+biddingReturnsTheCardsLeftInHand :: TestTree
+biddingReturnsTheCardsLeftInHand = testProperty "bidding returns the cards left in hand for each player" $ forAll returnedRaisesAndInitialHands cardsInHandIsCorrect where
+  cardsInHandIsCorrect (initialHands, cardsLeftInHand, playerBids) = (initialHands `minusMap` playerBids) `containsSameElementsAndKeysAs` cardsLeftInHand
+
+minusMap :: (Ord k, Eq v) => Map k [v] -> Map k [v] -> Map k [v]
+minusMap = Map.differenceWith minusStrict
+
+minusStrict :: Eq v =>  [v] -> [v] -> Maybe [v]
+minusStrict xs [] = Just xs
+minusStrict [] _ = Nothing
+minusStrict xs (y:ys) = do
+  xs' <- removeStrict y xs
+  minusStrict xs' ys
+
+removeStrict :: Eq v => v -> [v] -> Maybe [v]
+removeStrict v [] = Nothing
+removeStrict v (x:xs) 
+  | v == x = Just xs 
+  | otherwise = (x:) <$> removeStrict v xs
+
+containsSameElementsAndKeysAs :: (Ord k, Ord v) => Map k [v] -> Map k [v] -> Bool
+containsSameElementsAndKeysAs m n = sortedAndSorted m == sortedAndSorted n where
+  sortedAndSorted = sort . Map.toList . Map.map sort
+
+containsTheSameElementsAs :: Ord a =>  [a] -> [a] -> Bool
+containsTheSameElementsAs xs ys = sort xs == sort ys
+
+type CardsLeftInHand = Map Player [Card]
+type CardsBid = Map Player [Card]
+type InitialHandsMap = Map Player [Card]
+
+
+
+
+type CardsBidSoFar = [Card]
+type CardsRequested = [Card]
+
 
 type Player = Int
 
@@ -72,13 +147,6 @@ biddingPlayers = do
     runBidding recordedBidGen initialHands
   return (map fst initialHands, playersAskedInTurn)
 
-playersAskedInSequence :: TestTree
-playersAskedInSequence =
-  testProperty "players asked in turn starting from first player" $
-  forAll biddingPlayers playersAskedInSequence'
-  where
-    playersAskedInSequence' (initialPlayerSequence, playersAskedInTurn) =
-      playersAskedInTurn `isPrefixOf` (cycle initialPlayerSequence)
 type NumberOfPlayers = Int
 
 biddingBids :: Gen (NumberOfPlayers, [Bid])
@@ -90,16 +158,13 @@ biddingBids = do
   return (length initialHands, bids)
 
 
-playEndsAfterFullSequenceOfPasses :: TestTree
-playEndsAfterFullSequenceOfPasses = testProperty "play ends after first full sequence of passes" $ forAll biddingBids playEndsAfterFullSequenceOfPasses' where
-  playEndsAfterFullSequenceOfPasses' (numberOfPlayers, bids) = indexAtLastPass == Just(length bids) where 
-    indexAtLastPass = indexAtLastPass' 1 0 bids 
-    indexAtLastPass' _ _ [] = Nothing
-    indexAtLastPass' index _ (Raise _ : rest) = indexAtLastPass' (index+1) 0 rest
-    indexAtLastPass' index passes (Pass: rest) = if passes +1 == numberOfPlayers then Just index else indexAtLastPass' (index + 1) (passes + 1) rest
 
 biddingRecords :: Gen [Record]
 biddingRecords = startingGen >>= execWriterT . runBidding recordedBidGen
+
+returnedRaisesGen :: Gen ([(Player, [Card])], [(Player, Bid)])
+returnedRaisesGen = startingGen >>= runWriterT . fmap finishedPlayerRaises  . mapWritten (map playerBid) . runBidding recordedBidGen where
+  playerBid record = (recordedPlayer record, recordedBid record)
 
 type TopTotal = Int
 type PlayerTotal = Int
@@ -112,15 +177,35 @@ maxBidGen = totals <$> biddingRecords where
   playerAndRunningTotals records = zip (recordedPlayer <$> records) (runningTotals $ map playerBid records)
   playerBid r = (recordedPlayer r, recordedBid r)
 
-playersGivenCorrectMaximum :: TestTree
-playersGivenCorrectMaximum = testProperty "players given a maximum that would take them one ahead of current max" $ forAll maxBidGen allMaxesAreCorrect where
-  allMaxesAreCorrect = all maxIsCorrect
-  maxIsCorrect (maxBid, topTotal, playerTotal) = playerTotal + maxBid == topTotal + 1
+runningTotalBids :: [(Player,Bid)] -> [Map Player [Card]]
+runningTotalBids = scanl (flip accumulate) Map.empty where
+  accumulate (player, Pass) = id
+  accumulate (player, Raise cards) = Map.insertWith (++) player cards
 
 runningTotals :: [(Player,Bid)] -> [Map Player Int]
-runningTotals = scanl (flip accumulate) Map.empty where
-  accumulate (player,Pass) = id
-  accumulate (player, Raise cards) = Map.insertWith (+) player (length cards)
+runningTotals = map (Map.map length) . runningTotalBids
+
+cardsLeftGen :: Gen (Map Player [Card], [(Player, CardsRequested, CardsBidSoFar)])
+cardsLeftGen = do
+  initialHands <- startingGen
+  requests <- execWriterT . mapWritten toRequests $ runBidding recordedBidGen initialHands
+  return (Map.fromList initialHands, requests)
+  where
+    toRequests records = zip3 (recordedPlayer <$> records) (recordedCards <$> records) (playerTotal records)
+    playerTotal = map (uncurry $ findOrEmptyList) . playerAndRunningTotals
+    playerAndRunningTotals records = zip (recordedPlayer <$> records) (runningTotalBids $ map playerBid records)
+    playerBid r = (recordedPlayer r, recordedBid r)
+
+returnedRaisesAndInitialHands :: Gen (InitialHandsMap, CardsLeftInHand, CardsBid)
+returnedRaisesAndInitialHands = do
+  initialHands <- startingGen
+  (cardsLeftInHand, cardsBid) <- runWriterT . fmap finishedCardsInHand . mapWritten playerBids $ runBidding recordedBidGen initialHands
+  return (Map.fromList initialHands, cardsLeftInHand, cardsBid) 
+  where
+    playerBids = foldr (uncurry $ Map.insertWith (++)) Map.empty . map playerBid
+    playerBid record = (recordedPlayer record, cardsOf $ recordedBid record)
+    cardsOf Pass = []
+    cardsOf (Raise cards) = cards
 
 mapWritten :: Functor m => (w -> w') -> WriterT w m a -> WriterT w' m a
 mapWritten = mapWriterT . fmap . second
