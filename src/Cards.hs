@@ -5,6 +5,7 @@ module Cards
   , Rank
   , points
   , fullDeck
+  , reducedDeck
   , Trumps(..)
   , Trump(..)
   ) where

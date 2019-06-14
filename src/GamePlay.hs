@@ -1,6 +1,5 @@
 module GamePlay where
 
-import           AuctionPlay
 import           Cards
 import           Control.Monad.State.Lazy
 import           Data.List
@@ -65,18 +64,18 @@ playRoundAndUpdate playRound = do
 rotate :: [a] -> [a]
 rotate (first:rest) = rest ++ [first]
 
-gameRound ::
-     (Monad f, Ord player)
-  => ([player] ->  f [(player, [Card])])
-  -> ([(player, [Card])] -> f (FinishedAuction player))
-  -> (TrumpsAndTeams player -> f (CardsWon player))
-  -> [player]
-  -> f (Scores player)
-gameRound dealCards playAuction playCards players = scoreFinishedRound numberOfPlayers <$> finishedRound where
-  numberOfPlayers = length players
-  finishedRound = dealCards players >>= playAuction >>= finishRound
-  finishRound (Unsuccessful stalemate) =
-    return $ FinishedViaStalemate stalemate
-  finishRound (Successful trumpsAndTeams) =
-    FinishedViaCardPlay trumpsAndTeams <$> playCards trumpsAndTeams
-
+type DealCards f player = ([player] -> f [(player, [Card])])
+--gameRound ::
+--     (Monad f, Ord player)
+--  => ([player] ->  f [(player, [Card])])
+--  -> ([(player, [Card])] -> f (FinishedAuction player))
+--  -> (TrumpsAndTeams player -> f (CardsWon player))
+--  -> [player]
+--  -> f (Scores player)
+--gameRound dealCards playAuction playCards players = scoreFinishedRound numberOfPlayers <$> finishedRound where
+--  numberOfPlayers = length players
+--  finishedRound = dealCards players >>= playAuction >>= finishRound
+--  finishRound (Unsuccessful stalemate) =
+--    return $ FinishedViaStalemate stalemate
+--  finishRound (Successful trumpsAndTeams) =
+--    FinishedViaCardPlay trumpsAndTeams <$> playCards trumpsAndTeams

@@ -21,7 +21,7 @@ remove x (y:ys)
   | otherwise = y : (remove x ys)
 
 minus :: Eq a => [a] -> [a] -> [a]
-minus xs ys = foldl (flip remove) xs ys
+minus = foldr remove
 
 pairWith :: b -> a -> (a, b)
 pairWith b a = (a, b)

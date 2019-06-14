@@ -1,8 +1,10 @@
 module CardPlay
   ( PlayableCard(..)
   , EffectiveSuit
+  , CardPlayState
   ) where
 
+import           AuctionFunctions
 import           AuctionPlay
 import           Cards
 import           Control.Monad.State.Lazy
@@ -13,7 +15,6 @@ import           Data.Map.Lazy            (Map)
 import qualified Data.Map.Lazy            as Map
 import           TrickWinner
 import           Util
-import AuctionFunctions
 
 data CardPlayState player = CardPlayState
   { playerOrder   :: NonEmpty player
@@ -100,16 +101,27 @@ playRounds ::
   -> CardPlayState player
   -> f (Map player [Card])
 playRounds getCard numberOfRounds trumps initialState =
-  evalStateT 
-    (sequenceAndFoldr acc Map.empty . replicate numberOfRounds $ playTrick getCard trumps)
-    initialState where
+  evalStateT
+    (sequenceAndFoldr acc Map.empty . replicate numberOfRounds $
+     playTrick getCard trumps)
+    initialState
+  where
     acc (player, cards) = Map.insertWith (++) player $ NE.toList cards
 
-traverseAndFoldr :: (Foldable t, Applicative f) => (b -> c -> c) -> (a -> f b) -> c -> t a -> f c
-traverseAndFoldr f g z = foldr f' $ pure z where f' a fc = f <$> g a <*> fc
+traverseAndFoldr ::
+     (Foldable t, Applicative f)
+  => (b -> c -> c)
+  -> (a -> f b)
+  -> c
+  -> t a
+  -> f c
+traverseAndFoldr f g z = foldr f' $ pure z
+  where
+    f' a fc = f <$> g a <*> fc
 
-sequenceAndFoldr :: (Foldable t, Applicative f) => (b -> c -> c) -> c -> t (f b) -> f c
-sequenceAndFoldr f = traverseAndFoldr f id 
+sequenceAndFoldr ::
+     (Foldable t, Applicative f) => (b -> c -> c) -> c -> t (f b) -> f c
+sequenceAndFoldr f = traverseAndFoldr f id
 
 updateState ::
      Ord player

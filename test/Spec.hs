@@ -1,6 +1,7 @@
 import           AuctionCLI
 import           AuctionFunctions
 import           AuctionPlaySpec
+import           BiddingSpec
 import           Cards
 import           Data.List
 import qualified Data.Map.Lazy    as Map
@@ -11,7 +12,10 @@ type Player = Int
 
 main :: IO ()
 main = do
-  defaultMain $ testGroup "tests" [sixtyCards, auctionTests, auctionPlayTests]
+  defaultMain $
+    testGroup
+      "tests"
+      [sixtyCards, auctionTests, auctionPlayTests, biddingProperties]
 
 auctionTests :: TestTree
 auctionTests =
@@ -81,7 +85,6 @@ unfinished =
 --  testCase "an uneven bid should return the chief and vice" $
 --  playerBidsToStatus fivePlayers (singleCardRaise : twoCardRaise : fivePasses) @?=
 --  (Finished . Result $ ChiefAndVice playerTwo playerOne)
-
 --chiefOnly =
 --  testGroup
 --    "chiefOnly"
@@ -94,7 +97,6 @@ unfinished =
 --        (singleCardRaise : singleCardRaise2 : twoCardRaise : fivePasses) @?=
 --      (Finished . Result $ ChiefOnly playerThree)
 --    ]
-
 redSeven = Card {suit = Red, rank = 7}
 
 greenSeven = Card {suit = Green, rank = 7}
@@ -117,4 +119,6 @@ eklatCase =
   where
     bids = singleCardRaise : singleCardRaise : fivePasses
     eklat =
-      Finished (NoResult (Eklat {atFault = playerTwo, affected = [playerOne], topBid = 1}))
+      Finished
+        (NoResult
+           (Eklat {atFault = playerTwo, affected = [playerOne], topBid = 1}))
