@@ -232,13 +232,3 @@ sublistOfN n as = do
   rest <- sublistOfN (n - 1) remaining
   return $ a : rest
 
-class Monad f => GetBid f player where
-  getBid :: Int -> player -> [Card] -> f Bid
-
-newtype RecordWriterT a = RecordWriterT ( WriterT [Record] Gen a) deriving (Monad, Applicative, Functor)
-
-instance GetBid RecordWriterT Int where
-  getBid max player cards = do 
-    bid <- RecordWriterT . lift $ bidGen max player cards
-    RecordWriterT $ tell [ Record { recordedMax = max , recordedPlayer = player , recordedBid = bid , recordedCards = cards } ]
-    return bid
