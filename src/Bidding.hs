@@ -1,8 +1,11 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Bidding
   ( InitialHands
   , MaxBid
   , Bid(..)
   , FinishedBidding(..)
+  , GetBid(..)
   , runBidding
   ) where
 
@@ -16,11 +19,15 @@ type InitialHands player = [(player, [Card])]
 
 type MaxBid = Int
 
-type GetBid f player = (Int -> player -> [Card] -> f Bid)
+class Monad f =>
+      GetBid f player
+  where
+  getBid :: Int -> player -> [Card] -> f Bid
 
 data Bid
   = Pass
-  | Raise [Card] deriving Show
+  | Raise [Card]
+  deriving (Show)
 
 data FinishedBidding player = FinishedBidding
   { finishedCardsInHand  :: Map player [Card]
@@ -42,12 +49,11 @@ initialState initialHands =
     }
 
 runBidding ::
-     (Ord player, Monad f)
-  => GetBid f player
-  -> [(player, [Card])]
+     (Ord player, GetBid f player)
+  => [(player, [Card])]
   -> f (FinishedBidding player)
-runBidding getBid initialHands =
-  evalStateT (runBiddingStateful getBid numberOfPlayers playerSequence) $
+runBidding initialHands =
+  evalStateT (runBiddingStateful numberOfPlayers playerSequence) $
   initialState initialHands
   where
     playerSequence = cycle players
@@ -57,27 +63,25 @@ runBidding getBid initialHands =
 type NumberOfPlayers = Int
 
 runBiddingStateful ::
-     (Ord player, Monad f)
-  => GetBid f player
-  -> NumberOfPlayers
+     (Ord player, GetBid f player)
+  => NumberOfPlayers
   -> [player]
   -> StateT (BiddingState player) f (FinishedBidding player)
-runBiddingStateful getBid numberOfPlayers = runBiddingStateful'
+runBiddingStateful numberOfPlayers = runBiddingStateful'
   where
     runBiddingStateful' (thisPlayer:laterPlayers) = do
       passes <- gets passesSoFar
       if (passes == numberOfPlayers)
         then gets finishBidding
-        else modifyF (getSingleBid getBid thisPlayer) *>
+        else modifyF (getSingleBid thisPlayer) *>
              runBiddingStateful' laterPlayers
 
 getSingleBid ::
-     (Functor f, Ord player)
-  => GetBid f player
-  -> player
+     (GetBid f player, Ord player)
+  => player
   -> BiddingState player
   -> f (BiddingState player)
-getSingleBid getBid player state =
+getSingleBid player state =
   newBiddingState state player <$> getBid maxBid player cards
   where
     bidTotals =
