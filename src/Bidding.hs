@@ -7,11 +7,11 @@ module Bidding
   ) where
 
 import           Cards
+import           Control.Monad.Reader
 import           Control.Monad.State.Lazy
 import           Data.Map.Lazy            (Map)
 import qualified Data.Map.Lazy            as Map
 import           Util
-import Control.Monad.Reader
 
 type InitialHands player = [(player, [Card])]
 
@@ -21,7 +21,8 @@ type GetBid f player = (Int -> player -> [Card] -> f Bid)
 
 data Bid
   = Pass
-  | Raise [Card] deriving Show
+  | Raise [Card]
+  deriving (Show)
 
 data FinishedBidding player = FinishedBidding
   { finishedCardsInHand  :: Map player [Card]
@@ -41,7 +42,6 @@ initialState initialHands =
     , passesSoFar = 0
     , playerRaisesSoFar = []
     }
-
 
 runBidding ::
      (Ord player, Monad f)
@@ -76,16 +76,18 @@ getSingleBid ::
   => player
   -> BiddingState player
   -> ReaderT (GetBid f player) f (BiddingState player)
-getSingleBid player state = ReaderT getSingleBid' where
-  getSingleBid' getBid = newBiddingState state player <$> getBid maxBid player cards
-  bidTotals =
-    foldr (uncurry $ Map.insertWith (+)) Map.empty . map (second length) $
-    playerRaisesSoFar state
-  second f (a, b) = (a, f b)
-  topBid = maximum $ 0 : Map.elems bidTotals
-  playerTotal = Map.findWithDefault 0 player bidTotals
-  maxBid = topBid + 1 - playerTotal
-  cards = findOrEmptyList player $ cardsInHandSoFar state
+getSingleBid player state = ReaderT getSingleBid'
+  where
+    getSingleBid' getBid =
+      newBiddingState state player <$> getBid maxBid player cards
+    bidTotals =
+      foldr (uncurry $ Map.insertWith (+)) Map.empty . map (second length) $
+      playerRaisesSoFar state
+    second f (a, b) = (a, f b)
+    topBid = maximum $ 0 : Map.elems bidTotals
+    playerTotal = Map.findWithDefault 0 player bidTotals
+    maxBid = topBid + 1 - playerTotal
+    cards = findOrEmptyList player $ cardsInHandSoFar state
 
 newBiddingState ::
      Ord player => BiddingState player -> player -> Bid -> BiddingState player
