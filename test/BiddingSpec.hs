@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module BiddingSpec
   ( biddingProperties
   ) where
@@ -212,7 +214,7 @@ mapWritten = mapWriterT . fmap . second
   where
     second f (a, b) = (a, f b)
 
-bidGen :: MaxBid -> Player -> [Card] -> Gen Bid
+bidGen :: MaxBid -> player -> [Card] -> Gen Bid
 bidGen maxBid player cards = do
   numberOfCards <- choose (0, maxBid)
   bidFromCards <$> sublistOfN numberOfCards cards
@@ -229,3 +231,14 @@ sublistOfN n as = do
   let remaining = remove a as
   rest <- sublistOfN (n - 1) remaining
   return $ a : rest
+
+class Monad f => GetBid f player where
+  getBid :: Int -> player -> [Card] -> f Bid
+
+newtype RecordWriterT a = RecordWriterT ( WriterT [Record] Gen a) deriving (Monad, Applicative, Functor)
+
+instance GetBid RecordWriterT Int where
+  getBid max player cards = do 
+    bid <- RecordWriterT . lift $ bidGen max player cards
+    RecordWriterT $ tell [ Record { recordedMax = max , recordedPlayer = player , recordedBid = bid , recordedCards = cards } ]
+    return bid
