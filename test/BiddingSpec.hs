@@ -15,6 +15,7 @@ import           Util
 import qualified Data.Map.Lazy as Map
 import           Data.Map.Lazy (Map)
 import           Control.Monad.State.Lazy
+import           Control.Monad.Reader
 
 biddingProperties :: TestTree
 biddingProperties = testGroup "Bidding" [playersAskedInSequence, playEndsAfterFullSequenceOfPasses, playersGivenCorrectMaximum, playersRequestFromCardsLeft, biddingReturnsRaisesInOrder, biddingReturnsTheCardsLeftInHand ]
@@ -126,15 +127,6 @@ recordedBidGen maxBid player cards = do
     ]
   return bid
 
---finishedBidding :: TestContext (FinishedBidding Player)
---finishedBidding = do
---  initialHands <- lift startingGen
---  runBidding recordedBidGen initialHands
---
---finishedBiddingPlayers :: Gen (FinishedBidding Player, [Player])
---finishedBiddingPlayers =
---  runWriterT $ mapWritten (fmap recordedPlayer) finishedBidding
-
 type InitialPlayerSequence = [Player]
 
 type PlayersAskedInTurn = [Player]
@@ -143,8 +135,7 @@ biddingPlayers :: Gen (InitialPlayerSequence, PlayersAskedInTurn)
 biddingPlayers = do
   initialHands <- startingGen
   playersAskedInTurn <-
-    execWriterT . mapWritten (fmap recordedPlayer) $
-    runBidding recordedBidGen initialHands
+    execWriterT . mapWritten (fmap recordedPlayer) $ runRecorded initialHands
   return (map fst initialHands, playersAskedInTurn)
 
 type NumberOfPlayers = Int
@@ -153,17 +144,17 @@ biddingBids :: Gen (NumberOfPlayers, [Bid])
 biddingBids = do
   initialHands <- startingGen
   bids <- 
-    execWriterT . mapWritten (fmap recordedBid) $ 
-    runBidding recordedBidGen initialHands
+    execWriterT . mapWritten (fmap recordedBid) $ runRecorded initialHands
   return (length initialHands, bids)
 
-
+runRecorded :: InitialHands Player -> WriterT [Record] Gen (FinishedBidding Player)
+runRecorded initialHands = runReaderT (runBidding initialHands) recordedBidGen
 
 biddingRecords :: Gen [Record]
-biddingRecords = startingGen >>= execWriterT . runBidding recordedBidGen
+biddingRecords = startingGen >>= execWriterT . runRecorded
 
 returnedRaisesGen :: Gen ([(Player, [Card])], [(Player, Bid)])
-returnedRaisesGen = startingGen >>= runWriterT . fmap finishedPlayerRaises  . mapWritten (map playerBid) . runBidding recordedBidGen where
+returnedRaisesGen = startingGen >>= runWriterT . fmap finishedPlayerRaises  . mapWritten (map playerBid) . runRecorded where
   playerBid record = (recordedPlayer record, recordedBid record)
 
 type TopTotal = Int
@@ -188,7 +179,7 @@ runningTotals = map (Map.map length) . runningTotalBids
 cardsLeftGen :: Gen (Map Player [Card], [(Player, CardsRequested, CardsBidSoFar)])
 cardsLeftGen = do
   initialHands <- startingGen
-  requests <- execWriterT . mapWritten toRequests $ runBidding recordedBidGen initialHands
+  requests <- execWriterT . mapWritten toRequests $ runRecorded initialHands
   return (Map.fromList initialHands, requests)
   where
     toRequests records = zip3 (recordedPlayer <$> records) (recordedCards <$> records) (playerTotal records)
@@ -199,7 +190,7 @@ cardsLeftGen = do
 returnedRaisesAndInitialHands :: Gen (InitialHandsMap, CardsLeftInHand, CardsBid)
 returnedRaisesAndInitialHands = do
   initialHands <- startingGen
-  (cardsLeftInHand, cardsBid) <- runWriterT . fmap finishedCardsInHand . mapWritten playerBids $ runBidding recordedBidGen initialHands
+  (cardsLeftInHand, cardsBid) <- runWriterT . fmap finishedCardsInHand . mapWritten playerBids $ runRecorded initialHands
   return (Map.fromList initialHands, cardsLeftInHand, cardsBid) 
   where
     playerBids = foldr (uncurry $ Map.insertWith (++)) Map.empty . map playerBid
