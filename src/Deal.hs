@@ -7,6 +7,7 @@ import           AuctionFunctions
 import           Cards
 import           Data.List.Split
 import qualified Data.Map.Lazy    as Map
+import Control.Monad.Reader
 
 --import           System.Random.Shuffle
 --shuffleAndDivide :: Ord a => [a] -> [b] -> IO  [( a, [b] )]
@@ -41,3 +42,10 @@ dealCards players = deal players deck
       if length players == 3
         then reducedDeck
         else fullDeck
+
+type Shuffle2 f a = [a] -> f [a]
+
+--shuffleAndDeal :: (Functor f) => [player] -> ReaderT (Shuffle2 f a) f [(player, [Card])]
+--shuffleAndDeal players = 
+
+

@@ -65,10 +65,14 @@ rotate :: [a] -> [a]
 rotate (first:rest) = rest ++ [first]
 
 type DealCards f player = ([player] -> f [(player, [Card])])
---gameRound ::
---     (Monad f, Ord player)
---  => ([player] ->  f [(player, [Card])])
---  -> ([(player, [Card])] -> f (FinishedAuction player))
+
+
+
+gameRound ::
+     (Monad f, Ord player)
+  => ([player] ->  f [(player, [Card])])
+  -> ([(player, [Card])] -> f (ResolvedBidding player))
+  -> 
 --  -> (TrumpsAndTeams player -> f (CardsWon player))
 --  -> [player]
 --  -> f (Scores player)

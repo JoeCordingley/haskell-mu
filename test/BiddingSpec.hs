@@ -259,9 +259,9 @@ returnedRaisesAndInitialHands = do
     cardsOf (Raise cards) = cards
 
 mapWritten :: Functor m => (w -> w') -> WriterT w m a -> WriterT w' m a
-mapWritten = mapWriterT . fmap . second
+mapWritten = mapWriterT . fmap . mapSnd
   where
-    second f (a, b) = (a, f b)
+    mapSnd f (a, b) = (a, f b)
 
 bidGen :: MaxBid -> player -> [Card] -> Gen Bid
 bidGen maxBid player cards = do

@@ -7,6 +7,7 @@ import           Data.List
 import qualified Data.Map.Lazy    as Map
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import BiddingResolutionSpec
 
 type Player = Int
 
@@ -15,7 +16,7 @@ main = do
   defaultMain $
     testGroup
       "tests"
-      [sixtyCards, auctionTests, auctionPlayTests, biddingProperties]
+      [sixtyCards, auctionTests, auctionPlayTests, biddingProperties, biddingResolutionTests]
 
 auctionTests :: TestTree
 auctionTests =

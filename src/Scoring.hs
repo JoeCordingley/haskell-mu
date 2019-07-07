@@ -19,6 +19,8 @@ type CardsBid = Int
 
 type Score = Int
 
+pairWith = flip (,)
+
 target :: NumberOfPlayers -> CardsBid -> Score
 target 3 cardsBid = 10 + 2 * cardsBid
 target 4 cardsBid = 28 + 2 * cardsBid
