@@ -3,6 +3,8 @@ module Scoring
   , FinishedRound(..)
   , CardsWon
   , scoreFinishedRound
+  , TrumpsAndChiefsTeam(..)
+  , scoreCardPlay
   ) where
 
 import           AuctionFunctions
@@ -112,6 +114,22 @@ scoreFinishedRound numberOfPlayers (FinishedViaCardPlay (TrumpsAndTeams trumps t
     cardPoints = countPips cardsWon
     bonusPoints' =
       bonusPoints numberOfPlayers (chiefTrump trumps) teams cardsBid cardPoints
+
+
+data TrumpsAndChiefsTeam player
+  = TrumpsAndChiefsTeam 
+    { trumps :: Trumps
+    , chiefsTeam :: Teams player
+    }
+
+scoreCardPlay :: (Ord player) => NumberOfPlayers -> TrumpsAndChiefsTeam player -> TopBid -> Map player [Card] -> Scores player
+scoreCardPlay numberOfPlayers (TrumpsAndChiefsTeam trumps team) cardsBid cardsWon = 
+  Map.unionWith (+) cardPoints bonusPoints'
+  where
+    cardPoints = countPips cardsWon
+    bonusPoints' =
+      bonusPoints numberOfPlayers (chiefTrump trumps) team cardsBid cardPoints
+
 
 chiefTrump :: Trumps -> Trump
 chiefTrump (SingleTrump trump)    = trump
