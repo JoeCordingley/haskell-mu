@@ -148,10 +148,11 @@ settleAuction ::
   => (player -> [Trump] -> f Trump)
   -> (player -> [player] -> f player)
   -> [player]
-  -> SuccessfulBidding player
+  -> Winners player
+  -> CardPositions player
   -> f (TrumpsAndChiefsTeam player)
-settleAuction getTrump getPartner players (SuccessfulBidding winners successfulTopBid biddingPositions ) = do
-  trumps <- getTrumps getTrump winners $ cardsOnTable biddingPositions
+settleAuction getTrump getPartner players winners cardPositions = do
+  trumps <- getTrumps getTrump winners $ cardsOnTable cardPositions
   teams <- 
     if numberOfPlayers == 3
       then return $ ChiefAlone chief'
