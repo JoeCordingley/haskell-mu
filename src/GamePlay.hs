@@ -70,8 +70,6 @@ rotate (first:rest) = rest ++ [first]
 type DealCards f player = ([player] -> f [(player, [Card])])
 
 
-
-
 data Dependencies f player = Dependencies 
   { dealCards :: [player] ->  f [(player, [Card])]
   , runBidding :: [(player, [Card])] -> f (FinishedBidding player)

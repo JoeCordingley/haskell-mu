@@ -5,6 +5,7 @@ module AuctionPlay
   , Trumps(..)
   , Trump(..)
   , TrumpsAndTeams(..)
+  , TrumpsAndChiefsTeam(..)
   , Teams(..)
   , FinishedAuction(..)
   ) where
@@ -16,6 +17,12 @@ import           Data.List.Index
 import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 import           Util
+
+data TrumpsAndChiefsTeam player
+  = TrumpsAndChiefsTeam 
+    { trumps :: Trumps
+    , chiefsTeam :: Teams player
+    }
 
 data TrumpsAndTeams player =
   TrumpsAndTeams Trumps
@@ -140,9 +147,23 @@ settleAuction ::
      (Eq player, Ord player, Monad f)
   => (player -> [Trump] -> f Trump)
   -> (player -> [player] -> f player)
+  -> [player]
   -> SuccessfulBidding player
-  -> f (TrumpsAndTeams player)
-settleAuction = undefined
+  -> f (TrumpsAndChiefsTeam player)
+settleAuction getTrump getPartner players (SuccessfulBidding winners successfulTopBid biddingPositions ) = do
+  trumps <- getTrumps getTrump winners $ cardsOnTable biddingPositions
+  teams <- 
+    if numberOfPlayers == 3
+      then return $ ChiefAlone chief'
+      else fmap (ChiefAndPartner chief') . getPartner chief' $
+           potentialPartners winners
+  return $ TrumpsAndChiefsTeam trumps teams
+  where 
+    chief' = chief winners
+    potentialPartners (ChiefOnly chief) = remove chief players
+    potentialPartners (ChiefAndVice chief vice) =
+      remove chief $ remove vice players
+    numberOfPlayers = length players
 
 auctionRound ::
      (Eq player, Ord player, Monad f)

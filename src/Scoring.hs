@@ -9,7 +9,7 @@ module Scoring
   ) where
 
 import           AuctionFunctions
-import           AuctionPlay
+import           AuctionPlay (Teams(..), TrumpsAndTeams(..), TrumpsAndChiefsTeam(..))
 import           Cards
 import           Data.List
 import           Data.Map.Lazy    (Map)
@@ -117,11 +117,6 @@ scoreFinishedRound numberOfPlayers (FinishedViaCardPlay (TrumpsAndTeams trumps t
       bonusPoints numberOfPlayers (chiefTrump trumps) teams cardsBid cardPoints
 
 
-data TrumpsAndChiefsTeam player
-  = TrumpsAndChiefsTeam 
-    { trumps :: Trumps
-    , chiefsTeam :: Teams player
-    }
 
 scoreCardPlay :: (Ord player) => NumberOfPlayers -> TrumpsAndChiefsTeam player -> TopBid -> Map player [Card] -> Scores player
 scoreCardPlay numberOfPlayers (TrumpsAndChiefsTeam trumps team) cardsBid cardsWon = 
