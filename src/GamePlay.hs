@@ -7,6 +7,8 @@ import qualified Data.Map.Lazy            as Map
 import           Data.Map.Lazy            (Map)
 import           Data.Maybe
 import           Scoring
+import AuctionFunctions (Stalemate, CardPositions, Winners, SuccessfulBidding(..), FinishedBidding(..))
+import CardPlay (CardPlayState)
 
 data EndCondition
   = NumberOfRounds Int
@@ -70,75 +72,37 @@ type DealCards f player = ([player] -> f [(player, [Card])])
 
 
 
-data Stalemate player 
-  = EklatNoBids
-  | Eklat
-  { playerAtFault :: player
-  , playersAffected :: [player]
+data Dependencies f player = Dependencies 
+  { dealCards :: [player] ->  f [(player, [Card])]
+  , runBidding :: [(player, [Card])] -> f (FinishedBidding player)
+  , settleAuction :: SuccessfulBidding player -> f (TrumpsAndChiefsTeam player)
+  , cardPlay :: Trumps -> [player] -> CardPositions player -> f (Map player [Card])
   }
-  
-scoreStalemate ::
-     Stalemate player
-  -> Scores player
-scoreStalemate = undefined
-
-data CardPositions player = CardPositions
-  { cardsInHand  :: Map player [Card]
-  , cardsOnTable :: Map player [Card]
-  } deriving (Eq, Show)
-
-
-
-data Winners player = 
-  Winners 
-    { topBidder :: player
-    , vice :: Maybe player
-    }
-
-
-data FinishedBidding player
-  = Successful (SuccessfulBidding player)
-  | Unsuccessful (Stalemate player)
-
-data SuccessfulBidding player = SuccessfulBidding 
-  { winners :: Winners player
-  , winningBid :: Int
-  , cardPositions :: CardPositions player
-  }
-
 
 gameRound ::
      (Monad f, Ord player)
-  => ([player] -> f [(player, [Card])])
-  -> ([(player, [Card])] -> f (FinishedBidding player))
-  -> (SuccessfulBidding player -> f (TrumpsAndChiefsTeam player)) 
-  -> (Trumps -> CardPositions player -> f (Map player [Card]))
+  => Dependencies f player
   -> (TrumpsAndChiefsTeam player -> TopBid -> Map player [Card] -> Scores player)
   -> [player]
   -> f (Scores player)
-gameRound dealCards runBidding settleAuction cardPlay scoreCardPlay players = do
+gameRound (Dependencies dealCards runBidding settleAuction cardPlay) scoreCardPlay players = do
   finishedBids <- dealCards players >>= runBidding
   case finishedBids of
     Successful biddingResults -> do
       trumpsAndTeams <- settleAuction biddingResults
-      tricks <- cardPlay (trumps trumpsAndTeams) $ cardPositions biddingResults
-      return $ scoreCardPlay trumpsAndTeams (winningBid biddingResults) tricks
-    Unsuccessful stalemate -> return $ scoreStalemate stalemate
+      tricks <- cardPlay (trumps trumpsAndTeams) players $ biddingPositions biddingResults
+      return $ scoreCardPlay trumpsAndTeams (successfulTopBid biddingResults) tricks
+    Unsuccessful stalemate -> return $ stalemateScores stalemate
 
 play :: 
      (Monad f, Ord player)
-  => ([player] -> f [(player, [Card])])
-  -> ([(player, [Card])] -> f (FinishedBidding player))
-  -> (SuccessfulBidding player -> f (TrumpsAndChiefsTeam player)) 
-  -> (Trumps -> CardPositions player -> f (Map player [Card]))
+  => Dependencies f player
   -> EndCondition
   -> [player]
   -> f (Scores player)
-play dealCards runBidding settleAuction cardPlay endCondition players = playToTheEnd gameRound' endCondition players
+play dependencies endCondition players = playToTheEnd gameRound' endCondition players
   where
-    gameRound' = gameRound dealCards runBidding settleAuction cardPlay (scoreCardPlay (length players)) 
-
-
+    gameRound' = gameRound dependencies (scoreCardPlay (length players)) 
 
 
 type TopBid = Int
@@ -149,18 +113,3 @@ data Bid
   deriving (Show)
 
 
---gameRound ::
---     (Monad f, Ord player)
---  => ([player] ->  f [(player, [Card])])
---  -> ([(player, [Card])] -> f (ResolvedBidding player))
---  -> 
---  -> (TrumpsAndTeams player -> f (CardsWon player))
---  -> [player]
---  -> f (Scores player)
---gameRound dealCards playAuction playCards players = scoreFinishedRound numberOfPlayers <$> finishedRound where
---  numberOfPlayers = length players
---  finishedRound = dealCards players >>= playAuction >>= finishRound
---  finishRound (Unsuccessful stalemate) =
---    return $ FinishedViaStalemate stalemate
---  finishRound (Successful trumpsAndTeams) =
---    FinishedViaCardPlay trumpsAndTeams <$> playCards trumpsAndTeams

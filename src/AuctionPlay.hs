@@ -31,14 +31,10 @@ data Teams player
   deriving (Show)
 
 data FinishedAuction player
-  = Successful (TrumpsAndTeams player)
-  | Unsuccessful (Stalemate player)
+  = SuccessfulAuction (TrumpsAndTeams player)
+  | UnsuccessfulAuction (Stalemate player)
   deriving (Show)
 
-data FinishedAuction2 player
-  = ThreePlayerAuction Trumps
-  | FullGameAuction { chosenPartner :: player
-                    , chosenTrumps  :: Trumps }
 
 data Interactions f player = Interactions
   { getBid     :: Int -> player -> [Card] -> f Bid
@@ -140,6 +136,14 @@ getTrumps getTrump (ChiefAndVice chief vice) cardsBid = do
     findOrEmptyList chief cardsBid
   return $ HigherLower chiefTrump viceTrump
 
+settleAuction ::
+     (Eq player, Ord player, Monad f)
+  => (player -> [Trump] -> f Trump)
+  -> (player -> [player] -> f player)
+  -> SuccessfulBidding player
+  -> f (TrumpsAndTeams player)
+settleAuction = undefined
+
 auctionRound ::
      (Eq player, Ord player, Monad f)
   => Interactions f player
@@ -158,9 +162,9 @@ auctionRound interactions startingHands = do
           else fmap (ChiefAndPartner chief') . getPartner interactions chief' $
                potentialPartners winners
       let topBid = undefined
-      return . Successful $ TrumpsAndTeams trumps teams topBid cardPositions
+      return . SuccessfulAuction $ TrumpsAndTeams trumps teams topBid cardPositions
       where chief' = chief winners
-    NoResult stalemate -> return $ Unsuccessful stalemate
+    NoResult stalemate -> return $ UnsuccessfulAuction stalemate
   where
     players = fst <$> startingHands
     numberOfPlayers = length players

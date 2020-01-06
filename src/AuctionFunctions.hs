@@ -14,9 +14,10 @@ module AuctionFunctions
   , chief
   , Winners(..)
   , CardPositions(..)
-  , FinishedBidding
+  , FinishedBidding(..)
   , TopBid
   , finishBidding
+  , SuccessfulBidding(..)
   ) where
 
 import           Cards
@@ -35,11 +36,16 @@ data Bid
 
 type TopBid = Int
 
+
 data FinishedBidding player
-  = Successful2 { biddingWinners   :: Winners player
-                , biddingPositions :: CardPositions player
-                , successfulTopBid :: TopBid }
-  | Unsuccessful2 (Stalemate player)
+  = Successful (SuccessfulBidding player)
+  | Unsuccessful (Stalemate player)
+
+data SuccessfulBidding player = SuccessfulBidding 
+  { biddingWinners :: Winners player
+  , successfulTopBid :: Int
+  , biddingPositions :: CardPositions player
+  }
 
 data CardPositions player = CardPositions
   { cardsInHand  :: Map player [Card]
@@ -117,14 +123,14 @@ finishBidding ::
   -> FinishedBidding player
 finishBidding numberOfPlayers cardPositions lastToRaise =
   if null lastToRaise
-    then Unsuccessful2 EklatNoPoints
+    then Unsuccessful EklatNoPoints
     else case leadersInOrderOfLastRaised of
            [chief] ->
              case vices of
                [vice] -> finishWith $ ChiefAndVice chief vice
                _      -> finishWith $ ChiefOnly chief
            lastLeaderToRaise:others ->
-             Unsuccessful2
+             Unsuccessful
                Eklat
                  { atFault = lastLeaderToRaise
                  , affected = others
@@ -132,7 +138,7 @@ finishBidding numberOfPlayers cardPositions lastToRaise =
                  }
   where
     finishWith winners =
-      Successful2
+      Successful SuccessfulBidding
         { biddingWinners = winners
         , biddingPositions = cardPositions
         , successfulTopBid = maxBid

@@ -27,7 +27,7 @@ gameRound ::
 gameRound dealCards playAuction playCards =
   dealCards >>= playAuction >>= finishRound
   where
-    finishRound (Unsuccessful stalemate) =
+    finishRound (UnsuccessfulAuction stalemate) =
       return $ FinishedViaStalemate stalemate
-    finishRound (Successful trumpsAndTeams) =
+    finishRound (SuccessfulAuction trumpsAndTeams) =
       FinishedViaCardPlay trumpsAndTeams <$> playCards trumpsAndTeams

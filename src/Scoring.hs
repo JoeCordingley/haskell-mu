@@ -4,6 +4,7 @@ module Scoring
   , CardsWon
   , scoreFinishedRound
   , TrumpsAndChiefsTeam(..)
+  , stalemateScores
   , scoreCardPlay
   ) where
 
