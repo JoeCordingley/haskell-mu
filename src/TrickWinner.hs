@@ -31,15 +31,24 @@ effectiveSuit trumps card =
     then TrumpSuit
     else NormalSuit (suit card)
 
-winner :: Trumps -> NonEmpty (player, Card) -> player
-winner trumps playerCards = fst $ highestEarliest comparison playerCards
+winner :: Trumps -> [(player, Card)] -> player
+winner trumps playerCards = fst $ highestEarliest2 comparison playerCards
   where
     comparison leftPair rightPair =
       compareCards trumps suitLed (snd leftPair) (snd rightPair)
-    suitLed = effectiveSuit trumps . snd $ NE.head playerCards
+    suitLed = effectiveSuit trumps . snd $ head playerCards
 
 highestEarliest :: (a -> a -> Ordering) -> NonEmpty a -> a
 highestEarliest f (a :| as) = foldl g a as
+  where
+    g a a' =
+      case f a a' of
+        LT -> a'
+        EQ -> a
+        GT -> a
+
+highestEarliest2 :: (a -> a -> Ordering) -> [a] -> a
+highestEarliest2 f (a : as) = foldl g a as
   where
     g a a' =
       case f a a' of

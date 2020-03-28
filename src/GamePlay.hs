@@ -8,7 +8,6 @@ import           Data.Map.Lazy            (Map)
 import           Data.Maybe
 import           Scoring
 import AuctionFunctions (Stalemate, CardPositions, Winners, SuccessfulBidding(..), FinishedBidding(..))
-import CardPlay (CardPlayState)
 
 data EndCondition
   = NumberOfRounds Int
@@ -69,11 +68,18 @@ rotate (first:rest) = rest ++ [first]
 
 type DealCards f player = ([player] -> f [(player, [Card])])
 
+--dependencies :: 
+--     ([player] -> f [(player, [Card])]) 
+--  -> (Int -> player -> [Card] -> f Bid)
+--  -> (player -> [Trump] -> f Trump)
+--  -> (player -> [player] -> f player)
+--  -> Dependencies player
+--dependencies = undefined
 
 data Dependencies f player = Dependencies 
   { dealCards :: [player] ->  f [(player, [Card])]
   , runBidding :: [(player, [Card])] -> f (FinishedBidding player)
-  , settleAuction :: SuccessfulBidding player -> f (TrumpsAndChiefsTeam player)
+  , settleAuction :: [player] -> Winners player -> CardPositions player ->  f (TrumpsAndChiefsTeam player)
   , cardPlay :: Trumps -> [player] -> CardPositions player -> f (Map player [Card])
   }
 
@@ -86,10 +92,10 @@ gameRound ::
 gameRound (Dependencies dealCards runBidding settleAuction cardPlay) scoreCardPlay players = do
   finishedBids <- dealCards players >>= runBidding
   case finishedBids of
-    Successful biddingResults -> do
-      trumpsAndTeams <- settleAuction biddingResults
-      tricks <- cardPlay (trumps trumpsAndTeams) players $ biddingPositions biddingResults
-      return $ scoreCardPlay trumpsAndTeams (successfulTopBid biddingResults) tricks
+    Successful (SuccessfulBidding winners topBid positions) -> do
+      trumpsAndTeams <- settleAuction players winners positions
+      tricks <- cardPlay (trumps trumpsAndTeams) players positions
+      return $ scoreCardPlay trumpsAndTeams topBid tricks
     Unsuccessful stalemate -> return $ stalemateScores stalemate
 
 play :: 

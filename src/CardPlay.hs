@@ -1,7 +1,6 @@
 module CardPlay
   ( PlayableCard(..)
   , EffectiveSuit
-  , CardPlayState
   ) where
 
 import           AuctionFunctions
@@ -9,15 +8,14 @@ import           AuctionPlay
 import           Cards
 import           Control.Monad.State.Lazy
 import           Data.List
-import           Data.List.NonEmpty       (NonEmpty (..))
-import qualified Data.List.NonEmpty       as NE
 import           Data.Map.Lazy            (Map)
 import qualified Data.Map.Lazy            as Map
 import           TrickWinner
 import           Util
 
+
 data CardPlayState player = CardPlayState
-  { playerOrder   :: NonEmpty player
+  { playerOrder   :: [player]
   , cardPositions :: CardPositions player
   }
 
@@ -72,25 +70,21 @@ playTrick ::
      (Monad f, Ord player)
   => (player -> [PlayableCard] -> f PlayableCard)
   -> Trumps
-  -> StateT (CardPlayState player) f (player, NonEmpty Card)
+  -> StateT (CardPlayState player) f (player, [Card])
 playTrick getCard trumps = StateT playTrick'
   where
     playTrick' state = do
-      firstCard <- playCard' NewTrick firstPlayer
-      rest <- traverse (playCard' $ suitLedFrom firstCard) laterPlayers
-      let cards = firstCard :| rest
-          cardsAsPlayed = players `NE.zip` cards
-          playedTrick = players `NE.zip` trick
-          trick = NE.map cardOf cards
+      cards <- traverse (playCard' NewTrick) players
+      let cardsAsPlayed = players `zip` cards
+          playedTrick = players `zip` trick
+          trick = map cardOf cards
           winner' = winner trumps playedTrick
           wonTrick = (winner', trick)
-          newState = updateState winner' (NE.toList cardsAsPlayed) state
+          newState = updateState winner' cardsAsPlayed state
       return (wonTrick, newState)
       where
         players = playerOrder state
-        firstPlayer = NE.head players
         suitLedFrom = SuitLed . effectiveSuit trumps . cardOf
-        laterPlayers = NE.tail players
         playCard' = playCard getCard trumps $ cardPositions state
 
 playRounds ::
@@ -106,7 +100,7 @@ playRounds getCard numberOfRounds trumps initialState =
      playTrick getCard trumps)
     initialState
   where
-    acc (player, cards) = Map.insertWith (++) player $ NE.toList cards
+    acc (player, cards) = Map.insertWith (++) player cards
 
 traverseAndFoldr ::
      (Foldable t, Applicative f)
@@ -135,13 +129,13 @@ updateState winner playerCards (CardPlayState playerOrder cardPositions) =
     , cardPositions = newPositions playerCards cardPositions
     }
 
-newOrder :: Eq player => player -> NonEmpty player -> NonEmpty player
-newOrder winner' playerOrder' = playersFromWinner
+
+newOrder :: Eq player => player -> [player] -> [player]
+newOrder winner' players = playersFromWinner
   where
-    players = NE.toList playerOrder'
     numberOfPlayers = length players
     playersFromWinner =
-      NE.fromList . take numberOfPlayers . dropWhile (/= winner') $
+      take numberOfPlayers . dropWhile (/= winner') $
       cycle players
 
 newPositions ::
