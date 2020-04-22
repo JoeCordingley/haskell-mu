@@ -2,12 +2,14 @@ module AuctionPlay
   ( Interactions(..)
   , auctionRound
   , bidding
+  , bidding2
   , Trumps(..)
   , Trump(..)
   , TrumpsAndTeams(..)
   , TrumpsAndChiefsTeam(..)
   , Teams(..)
   , FinishedAuction(..)
+  , settleAuction
   ) where
 
 import           AuctionFunctions

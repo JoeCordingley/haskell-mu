@@ -1,6 +1,7 @@
 module CardPlay
   ( PlayableCard(..)
   , EffectiveSuit
+  , playCards
   ) where
 
 import           AuctionFunctions
@@ -22,6 +23,10 @@ data CardPlayState player = CardPlayState
 data PlayableCard
   = CardOnTable Card
   | CardInHand Card
+
+data PlayableCards 
+  = CardsOnTable [Card]
+  | CardsInHand [Card]
 
 playableCards :: Ord player => player -> CardPositions player -> [PlayableCard]
 playableCards player state =
@@ -101,6 +106,23 @@ playRounds getCard numberOfRounds trumps initialState =
     initialState
   where
     acc (player, cards) = Map.insertWith (++) player cards
+
+playCards ::
+     (Monad f, Ord player)
+  => (player -> [PlayableCard] -> f PlayableCard)
+  -> Trumps
+  -> player
+  -> [player]
+  -> CardPositions player
+  -> f (Map player [Card])
+playCards getCard trumps winner players positions = playRounds getCard (numberOfRounds $ length players) trumps $ CardPlayState (newOrder winner players) positions 
+
+numberOfRounds :: Int -> Int
+numberOfRounds 3 = 12
+numberOfRounds 4 = 15
+numberOfRounds 5 = 12
+numberOfRounds 6 = 10
+
 
 traverseAndFoldr ::
      (Foldable t, Applicative f)

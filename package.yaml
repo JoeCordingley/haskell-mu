@@ -28,6 +28,10 @@ dependencies:
 - lens
 - semigroupoids
 - random-shuffle
+- MonadRandom
+- monad-loops
+- tuples-homogenous-h98
+
 
 library:
   source-dirs: src
