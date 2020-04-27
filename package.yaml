@@ -29,6 +29,7 @@ dependencies:
 - semigroupoids
 - random-shuffle
 - MonadRandom
+- composition
 - monad-loops
 - tuples-homogenous-h98
 - free

@@ -1,11 +1,11 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 
-module New.Exercise where
+module New.Util where
 
 import Control.Applicative.Free (Ap(..), liftAp, runAp)
 import Data.Functor.Identity
-import Control.Lens
+import Control.Lens hiding ((<.>))
 
 data Mono x y a where
   Mono :: x -> Mono x y y
@@ -34,4 +34,20 @@ sortTraversable = runMono id . sortAp . traverse liftMono
 
 sortTraversal :: Ord a => Traversal' s a -> s -> s
 sortTraversal tr = runMono id . sortAp . tr liftMono
+
+sortOn :: (Ord b, Traversable t) => (a -> b) -> t a -> t a
+sortOn f = fmap originalValue . sortTraversable . fmap (sortOnObj f)
+
+data SortOn a b = SortOn 
+  { sortedOn :: a
+  , originalValue :: b
+  }
+
+instance Eq a => Eq (SortOn a b) where
+  SortOn l _ == SortOn r _ = l == r
+instance Ord a => Ord ( SortOn a b ) where
+  SortOn l _ <= SortOn r _ = l <= r
+
+sortOnObj :: (a -> b) -> a -> SortOn b a 
+sortOnObj f a = SortOn (f a) a
 
