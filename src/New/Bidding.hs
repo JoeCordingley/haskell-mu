@@ -5,26 +5,32 @@
 module New.Bidding where
 
 import New.GamePlay
+import New.Exercise
 import Cards
-import AuctionFunctions(Bid(..), Winners(..))
+import AuctionFunctions(Bid(..), Winners(..), viceOrdering)
 import Control.Monad.State.Class
 import Control.Lens hiding ((<.>))
 import Data.Functor.Apply
 import Data.List
+import Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Semigroup as Semi
+import Data.Monoid
 
-data FinishedBidding f player
+data FinishedBidding  player
   = Successful (SuccessfulBidding player)
-  | Unsuccessful (Stalemate f player)
+  | Unsuccessful (Stalemate  player)
 
 data SuccessfulBidding player = SuccessfulBidding 
   { biddingWinners :: Winners player
   }
 
-data Stalemate f player
+data Stalemate player
   = EklatNoPoints
-  | Eklat { atFault  :: player
-          , affected :: f player
-          , topBid   :: Int }
+  | Eklat { topBid :: Int
+          , atFault  :: player
+          , affected :: NonEmpty player 
+          }
   deriving (Eq, Show)
 
 initialPositions :: [Card] -> CardPositions 
@@ -33,42 +39,109 @@ initialPositions cards = CardPositions{inHand = cards, onTable = []}
 type GetBid f player = player -> [Card] -> f Bid
 
 runAuction
-  :: (Monad m, Applicative players) =>
-     (player -> m Bid)
-     -> (player -> ASetter' (players [Card]) [Card])
-     -> m player
-     -> Int
-     -> m (players [Card])
-runAuction getBid setter players numberOfPlayers = runBidding' numberOfPlayers where
-  runBidding' 0 = return $ pure []
-  runBidding' passesLeft = do
+  :: (Monad f, Monoid raises) =>
+     (player -> f Bid)
+     -> (player -> [Card] -> raises) -> f player -> Int -> f raises
+runAuction getBid raise players numberOfPlayers = runAuction' numberOfPlayers where
+  runAuction' 0 = return $ mempty
+  runAuction' passesLeft = do
     player <- players
     bid <- getBid player
     case bid of 
-      Pass -> runBidding' (passesLeft - 1)
-      Raise cards -> over (setter player) (cards ++) <$> runBidding' numberOfPlayers
+      Pass -> runAuction' (passesLeft - 1)
+      Raise cards -> (raise player cards <>) <$> runAuction' numberOfPlayers
 
-tallyAuction fold traversal cards cards2 players playerCards = case maxBidders playerCards of
-  [] -> Unsuccessful (EklatNoPoints)
-  [player] -> Successful (SuccessfulBidding (winners player playerCards))
-  lastPlayerToRaise:others -> Unsuccessful (Eklat
-    { atFault = lastPlayerToRaise 
-    , affected = others
-    , topBid = topBid
-    })
-  where
-    maxBidders = undefined
-    winners = undefined
-    playerBidSizes = over (traversal ) length playerCards
-    maxBid = maximum1Of (fold ) playerBidSizes
-    topBid = undefined
+tallyAuction
+  :: Eq player => Getting (MaxBid (NonEmpty player) (Semi.Max Int)) playerCards (PlayerCards player)
+     -> Getting (MaxBid [player] ViceBid) playerCards (PlayerCards player)
+     -> playerCards
+     -> FinishedBidding player
+tallyAuction gettingTotals gettingViceBids playerCards = 
+  if topBid == 0 then Unsuccessful(EklatNoPoints)
+  else case NE.reverse maxBidders of
+    chief :| [] -> Successful(successful chief)
+    lastPlayerToRaise :| penultimate : others -> Unsuccessful(Eklat topBid lastPlayerToRaise (penultimate :| others))
+  where 
+    MaxBid (Semi.Max topBid) maxBidders = foldMapOf gettingTotals playerBids playerCards
+    successful = SuccessfulBidding . winners
+    winners chief = case vices chief of
+      [vice] -> ChiefAndVice chief vice
+      _ -> ChiefOnly chief
+    vices chief = maxBidPlayers $ foldMapOf (gettingViceBids . filtered (notPlayer chief)) viceBids playerCards
+    notPlayer player = (/=player) . playerCardsPlayer
+    viceBids (PlayerCards player cards) = MaxBid (ViceBid cards) [player] 
+    playerBids (PlayerCards player cards) = MaxBid (Semi.Max (length cards)) (player :| [])
 
---try pairs = maximum1Of (threeFold . _2) counts
---  where
---    counts = over (threeFold . _2) length pairs
-    
---tallyAuction fold = undefined
---  where
+playAuction getBid raise players numberOfPlayers gettingTotals gettingViceBids = tallyAuction gettingTotals gettingViceBids <$> runAuction getBid raise players numberOfPlayers
+  
+data ThreePlayers = OneOfThree | TwoOfThree | ThreeOfThree deriving (Eq, Enum, Show)
+
+raiseThree OneOfThree cards = Three cards [] []
+raiseThree TwoOfThree cards = Three [] cards []
+raiseThree ThreeOfThree cards = Three [] [] cards
+
+threePlayerSequence = cycle $ enumFrom OneOfThree
+
+players :: (Cycling player, MonadState player m) => m player
+players = state nextPlayer where
+  nextPlayer player = (player, successor player)
+
+class Cycling a where
+  successor :: a -> a
+
+instance Cycling ThreePlayers where
+  successor ThreeOfThree = OneOfThree 
+  successor other = succ other
+
+instance Semigroup m => Semigroup (Three m) where
+  Three l1 l2 l3 <> Three r1 r2 r3 = Three (l1 <> r1) (l2 <> r2) (l3 <> r3)
+
+instance Monoid m => Monoid (Three m) where
+  mempty = Three mempty mempty mempty
+
+raiseAndRecordThree player cards = (raiseThree player cards, [player])
+
+
+threePlayerAuction getBid = playAuction getBid raiseAndRecordThree players 3 
+
+nubrBy :: (a -> a -> Bool) ->  [a] -> [a]
+nubrBy f = reverse . nubBy f . reverse
+
+data PlayerCards player = PlayerCards 
+  { playerCardsPlayer:: player 
+  , playerCardsCards :: [Card]
+  }
+
+t2 :: Three (PlayerCards Int)
+t2 = undefined
+t = tallyAuction threeFold threeFold t2
+
+data ViceBid = ViceBid [Card]
+instance Eq ViceBid where
+  ViceBid a == ViceBid b = viceOrdering a b == EQ
+instance Ord ViceBid where
+  ViceBid a <= ViceBid b = viceOrdering a b /= GT
+
+instance Zeroed ViceBid where 
+  zero = ViceBid []
+
+data MaxBid players bid = MaxBid
+  { bid :: bid
+  , maxBidPlayers :: players
+  }
+
+instance (Ord bid, Semigroup players) => Semigroup (MaxBid players bid) where
+  MaxBid bidA playersA <> MaxBid bidB playersB = case compare bidA bidB of
+    GT -> MaxBid bidA playersA
+    LT -> MaxBid bidB playersB
+    EQ -> MaxBid bidA (playersA <> playersB)
+
+class Ord a => Zeroed a where
+  zero :: a
+
+instance (Monoid players, Zeroed bid) => Monoid (MaxBid players bid) where
+  mempty = MaxBid zero mempty
+
 winners f1 f2 f3 max playerCards = toListOf (f1 . filtered ((==max) . view f2) . f3)
 
 maxBid2 fold cards traversal playerCards = maximum1Of (fold ) (over (traversal . cards) length playerCards)
@@ -78,7 +151,6 @@ maxBid2 fold cards traversal playerCards = maximum1Of (fold ) (over (traversal .
 data Three a = Three a a a
 
 threeFold :: (Apply f) => (a -> f b) -> Three a -> f (Three b) 
---threeFold :: Fold1 (Three a) a 
 threeFold f (Three a b c) = Three <$> f a <.> f b <.> f c
 
 playerCards :: Three [Int]
@@ -111,8 +183,21 @@ mkpair1 aa bb = (ida aa, bb)
 sortByIndex :: (Eq a) => [a] -> [a] -> [a]
 sortByIndex order = sortOn $ flip elemIndex order
 
-data Typ = Myint Integer | Myotherint Integer
+data SortOn a b = SortOn 
+  { sortedOn :: a
+  , originalValue :: b
+  }
 
-func (Myint _) = True
-func (Myotherint _) = True
+instance Eq a => Eq (SortOn a b) where
+  SortOn l _ == SortOn r _ = l == r
+instance Ord a => Ord ( SortOn a b ) where
+  SortOn l _ <= SortOn r _ = l <= r
+
+sortOnObj :: (a -> b) -> a -> SortOn b a 
+sortOnObj f a = SortOn (f a) a
+
+sortOnIndex :: (Ord a, Traversable t) =>  [a] -> t a -> t a
+sortOnIndex order = fmap originalValue . sortTraversable . fmap (sortOnObj elemIndex') where
+  elemIndex' a = elemIndex a order
+
 

@@ -31,6 +31,7 @@ dependencies:
 - MonadRandom
 - monad-loops
 - tuples-homogenous-h98
+- free
 
 
 library:

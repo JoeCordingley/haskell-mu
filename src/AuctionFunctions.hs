@@ -18,6 +18,7 @@ module AuctionFunctions
   , TopBid
   , finishBidding
   , SuccessfulBidding(..)
+  , viceOrdering
   ) where
 
 import           Cards
