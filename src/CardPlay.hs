@@ -14,7 +14,6 @@ import qualified Data.Map.Lazy            as Map
 import           TrickWinner
 import           Util
 
-
 data CardPlayState player = CardPlayState
   { playerOrder   :: [player]
   , cardPositions :: CardPositions player
@@ -24,7 +23,7 @@ data PlayableCard
   = CardOnTable Card
   | CardInHand Card
 
-data PlayableCards 
+data PlayableCards
   = CardsOnTable [Card]
   | CardsInHand [Card]
 
@@ -115,14 +114,15 @@ playCards ::
   -> [player]
   -> CardPositions player
   -> f (Map player [Card])
-playCards getCard trumps winner players positions = playRounds getCard (numberOfRounds $ length players) trumps $ CardPlayState (newOrder winner players) positions 
+playCards getCard trumps winner players positions =
+  playRounds getCard (numberOfRounds $ length players) trumps $
+  CardPlayState (newOrder winner players) positions
 
 numberOfRounds :: Int -> Int
 numberOfRounds 3 = 12
 numberOfRounds 4 = 15
 numberOfRounds 5 = 12
 numberOfRounds 6 = 10
-
 
 traverseAndFoldr ::
      (Foldable t, Applicative f)
@@ -151,14 +151,12 @@ updateState winner playerCards (CardPlayState playerOrder cardPositions) =
     , cardPositions = newPositions playerCards cardPositions
     }
 
-
 newOrder :: Eq player => player -> [player] -> [player]
 newOrder winner' players = playersFromWinner
   where
     numberOfPlayers = length players
     playersFromWinner =
-      take numberOfPlayers . dropWhile (/= winner') $
-      cycle players
+      take numberOfPlayers . dropWhile (/= winner') $ cycle players
 
 newPositions ::
      Ord player

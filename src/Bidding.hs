@@ -109,4 +109,3 @@ finishBidding state =
     { finishedCardsInHand = cardsInHandSoFar state
     , finishedPlayerRaises = reverse $ playerRaisesSoFar state
     }
-

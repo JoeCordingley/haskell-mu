@@ -37,13 +37,12 @@ data Bid
 
 type TopBid = Int
 
-
 data FinishedBidding player
   = Successful (SuccessfulBidding player)
   | Unsuccessful (Stalemate player)
 
-data SuccessfulBidding player = SuccessfulBidding 
-  { biddingWinners :: Winners player
+data SuccessfulBidding player = SuccessfulBidding
+  { biddingWinners   :: Winners player
   , successfulTopBid :: Int
   , biddingPositions :: CardPositions player
   }
@@ -139,11 +138,12 @@ finishBidding numberOfPlayers cardPositions lastToRaise =
                  }
   where
     finishWith winners =
-      Successful SuccessfulBidding
-        { biddingWinners = winners
-        , biddingPositions = cardPositions
-        , successfulTopBid = maxBid
-        }
+      Successful
+        SuccessfulBidding
+          { biddingWinners = winners
+          , biddingPositions = cardPositions
+          , successfulTopBid = maxBid
+          }
     totals = bidTotals cardsBid
     maxBid = maximum $ 0 : Map.elems totals
     leaders = Map.keys $ Map.filter (== maxBid) $ totals

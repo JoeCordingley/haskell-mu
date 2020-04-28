@@ -6,7 +6,6 @@ import           AuctionPlay
 import           Cards
 import           Scoring
 
-
 --gameRound :: Monad f => f [(player,[Card])] -> ([(player,[Card])] -> f ( FinishedAuction player)) ->  (TrumpsAndTeams player -> f (CardsWon player)) -> f (Scores player)
 --gameRound dealCards playAuction playCards = do
 --  cards <- dealCards

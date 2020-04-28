@@ -1,13 +1,13 @@
 import           AuctionCLI
 import           AuctionFunctions
 import           AuctionPlaySpec
+import           BiddingResolutionSpec
 import           BiddingSpec
 import           Cards
 import           Data.List
-import qualified Data.Map.Lazy    as Map
+import qualified Data.Map.Lazy         as Map
 import           Test.Tasty
 import           Test.Tasty.HUnit
-import BiddingResolutionSpec
 
 type Player = Int
 
@@ -16,7 +16,12 @@ main = do
   defaultMain $
     testGroup
       "tests"
-      [sixtyCards, auctionTests, auctionPlayTests, biddingProperties, biddingResolutionTests]
+      [ sixtyCards
+      , auctionTests
+      , auctionPlayTests
+      , biddingProperties
+      , biddingResolutionTests
+      ]
 
 auctionTests :: TestTree
 auctionTests =

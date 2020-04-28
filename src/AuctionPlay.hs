@@ -20,11 +20,10 @@ import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 import           Util
 
-data TrumpsAndChiefsTeam player
-  = TrumpsAndChiefsTeam 
-    { trumps :: Trumps
-    , chiefsTeam :: Teams player
-    }
+data TrumpsAndChiefsTeam player = TrumpsAndChiefsTeam
+  { trumps     :: Trumps
+  , chiefsTeam :: Teams player
+  }
 
 data TrumpsAndTeams player =
   TrumpsAndTeams Trumps
@@ -43,7 +42,6 @@ data FinishedAuction player
   = SuccessfulAuction (TrumpsAndTeams player)
   | UnsuccessfulAuction (Stalemate player)
   deriving (Show)
-
 
 data Interactions f player = Interactions
   { getBid     :: Int -> player -> [Card] -> f Bid
@@ -155,13 +153,13 @@ settleAuction ::
   -> f (TrumpsAndChiefsTeam player)
 settleAuction getTrump getPartner players winners cardPositions = do
   trumps <- getTrumps getTrump winners $ cardsOnTable cardPositions
-  teams <- 
+  teams <-
     if numberOfPlayers == 3
       then return $ ChiefAlone chief'
       else fmap (ChiefAndPartner chief') . getPartner chief' $
            potentialPartners winners
   return $ TrumpsAndChiefsTeam trumps teams
-  where 
+  where
     chief' = chief winners
     potentialPartners (ChiefOnly chief) = remove chief players
     potentialPartners (ChiefAndVice chief vice) =
@@ -186,7 +184,8 @@ auctionRound interactions startingHands = do
           else fmap (ChiefAndPartner chief') . getPartner interactions chief' $
                potentialPartners winners
       let topBid = undefined
-      return . SuccessfulAuction $ TrumpsAndTeams trumps teams topBid cardPositions
+      return . SuccessfulAuction $
+        TrumpsAndTeams trumps teams topBid cardPositions
       where chief' = chief winners
     NoResult stalemate -> return $ UnsuccessfulAuction stalemate
   where

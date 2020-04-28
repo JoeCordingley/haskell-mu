@@ -21,4 +21,3 @@ remove x (y:ys)
 
 minus :: Eq a => [a] -> [a] -> [a]
 minus = foldr remove
-

@@ -7,7 +7,6 @@ import           Lib
 
 main :: IO ()
 main = someFunc
-
 --fivePlayerAuction :: IO ()
 --fivePlayerAuction = do
 --  startingHands <- newFivePlayerInitialHands

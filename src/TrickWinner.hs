@@ -48,7 +48,7 @@ highestEarliest f (a :| as) = foldl g a as
         GT -> a
 
 highestEarliest2 :: (a -> a -> Ordering) -> [a] -> a
-highestEarliest2 f (a : as) = foldl g a as
+highestEarliest2 f (a:as) = foldl g a as
   where
     g a a' =
       case f a a' of

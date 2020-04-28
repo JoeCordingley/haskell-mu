@@ -5,9 +5,9 @@ module Deal
 
 import           AuctionFunctions
 import           Cards
+import           Control.Monad.Reader
 import           Data.List.Split
-import qualified Data.Map.Lazy    as Map
-import Control.Monad.Reader
+import qualified Data.Map.Lazy        as Map
 
 --import           System.Random.Shuffle
 --shuffleAndDivide :: Ord a => [a] -> [b] -> IO  [( a, [b] )]
@@ -44,8 +44,5 @@ dealCards players = deal players deck
         else fullDeck
 
 type Shuffle2 f a = [a] -> f [a]
-
 --shuffleAndDeal :: (Functor f) => [player] -> ReaderT (Shuffle2 f a) f [(player, [Card])]
---shuffleAndDeal players = 
-
-
+--shuffleAndDeal players =
