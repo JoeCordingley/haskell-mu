@@ -4,9 +4,10 @@ import           AuctionCLI
 import           AuctionPlay
 import           Deal
 import           Lib
+import qualified Websockets.Websockets as WS
 
 main :: IO ()
-main = someFunc
+main = WS.main
 --fivePlayerAuction :: IO ()
 --fivePlayerAuction = do
 --  startingHands <- newFivePlayerInitialHands

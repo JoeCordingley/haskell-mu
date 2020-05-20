@@ -5,15 +5,22 @@
 
 packages:
 - completed:
-    hackage: hindent-5.2.7@sha256:a0a90f7cc160eeba3816e53f310e16942e68d9a09fe092d9835ea6bbbcd2cd91,3412
+    hackage: hindent-5.3.1@sha256:23dc3d423820a1de4a11f54eb87992f2c9fa1b686b2230bb06d1af46edc85c4b,3452
     pantry-tree:
-      size: 962
-      sha256: 95eb3407186dbe6ca032a8e3fac9e98a177f444f016f3b25cbe7ee4a45d6f385
+      size: 1027
+      sha256: 29ea7cff1847793ca6249158ad919f4bb7095e59067f9750f4ce7051496e03d0
   original:
-    hackage: hindent-5.2.7
+    hackage: hindent-5.3.1@sha256:23dc3d423820a1de4a11f54eb87992f2c9fa1b686b2230bb06d1af46edc85c4b,3452
+- completed:
+    hackage: stylish-haskell-0.9.4.4@sha256:ea514922e47ea05a924355a841abd26d18101037c46fbb90e201ae83582a8728,4953
+    pantry-tree:
+      size: 2863
+      sha256: 90316b02f585d82d84f90a393d838e9ae1603fd5c0a01f216459ab56f7dc8cfb
+  original:
+    hackage: stylish-haskell-0.9.4.4@sha256:ea514922e47ea05a924355a841abd26d18101037c46fbb90e201ae83582a8728,4953
 snapshots:
 - completed:
-    size: 495206
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/7.yaml
-    sha256: 3a5f3259a455fcd80ef9b37a432f0ac396f7a909069d69bb7271e0cbb61efd46
-  original: lts-13.7
+    size: 496112
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/15/13.yaml
+    sha256: 75a1a0f870e1876898b117b0e443f911b3fa2985bfabb53158c81ab5765beda5
+  original: lts-15.13

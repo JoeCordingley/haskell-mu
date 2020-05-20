@@ -33,6 +33,19 @@ dependencies:
 - monad-loops
 - tuples-homogenous-h98
 - free
+- servant-server
+- servant
+- servant-websockets
+- websockets
+- text
+- warp
+- wai
+- aeson
+- utf8-string
+- unordered-containers
+- async
+- hindent
+
 
 
 library:
