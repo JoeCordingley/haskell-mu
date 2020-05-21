@@ -91,12 +91,13 @@ dependencies dealCards getBid getTrump getPartner getCard =
     , cardPlay = playCards getCard
     }
 
-data Dependencies f player = Dependencies
-  { dealCards :: [player] -> f [(player, [Card])]
-  , runBidding :: [(player, [Card])] -> f (FinishedBidding player)
-  , settleAuctionRound :: [player] -> Winners player -> CardPositions player -> f (TrumpsAndChiefsTeam player)
-  , cardPlay :: Trumps -> player -> [player] -> CardPositions player -> f (Map player [Card])
-  }
+data Dependencies f player =
+  Dependencies
+    { dealCards :: [player] -> f [(player, [Card])]
+    , runBidding :: [(player, [Card])] -> f (FinishedBidding player)
+    , settleAuctionRound :: [player] -> Winners player -> CardPositions player -> f (TrumpsAndChiefsTeam player)
+    , cardPlay :: Trumps -> player -> [player] -> CardPositions player -> f (Map player [Card])
+    }
 
 gameRound ::
      (Monad f, Ord player)

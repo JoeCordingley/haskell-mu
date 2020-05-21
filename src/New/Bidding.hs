@@ -16,36 +16,41 @@ import           Data.Semigroup.Foldable
 import           Data.Tuple.Homogenous
 import           New.TupleInstances
 import           New.Util
+import Data.Foldable (toList)
+import New.Players
 
 data BiddingResult player
   = SuccessfulBiddingResult (WinnersAndTopBid player)
   | UnsuccessfulBiddingResult (Stalemate player)
 
 data WinnersAndTopBid player =
-  WinnersAndTopBid (Winners player)
-                   Int
+  WinnersAndTopBid (Winners player) Int
 
 data Stalemate player
   = EklatNoPoints
-  | Eklat { topBid   :: Int
-          , atFault  :: player
-          , affected :: NonEmpty player }
+  | Eklat
+      { topBid   :: Int
+      , atFault  :: player
+      , affected :: NonEmpty player
+      }
   deriving (Eq, Show)
 
 data FinishedBidding players player
   = Successful (SuccessfulBidding players player)
   | Unsuccessful (Stalemate player)
 
-data SuccessfulBidding players player = SuccessfulBidding
-  { biddingWinners   :: Winners player
-  , successfulTopBid :: Int
-  , biddingPositions :: players CardPositions
-  }
+data SuccessfulBidding players player =
+  SuccessfulBidding
+    { biddingWinners   :: Winners player
+    , successfulTopBid :: Int
+    , biddingPositions :: players CardPositions
+    }
 
-data CardPositions = CardPositions
-  { inHand  :: [Card]
-  , onTable :: [Card]
-  }
+data CardPositions =
+  CardPositions
+    { inHand  :: [Card]
+    , onTable :: [Card]
+    }
 
 finishBidding ::
      (BiddingResult player, players CardPositions)
@@ -53,6 +58,11 @@ finishBidding ::
 finishBidding (SuccessfulBiddingResult (WinnersAndTopBid winners topBid), cardPositions) =
   Successful (SuccessfulBidding winners topBid cardPositions)
 
+finishBidding2 :: Functor players => 
+     (BiddingResult player, players (player, CardPositions))
+  -> FinishedBidding players player
+finishBidding2 (SuccessfulBiddingResult (WinnersAndTopBid winners topBid), cardPositions) =
+  Successful (SuccessfulBidding winners topBid (snd <$> cardPositions))
 initialPositions :: [Card] -> CardPositions
 initialPositions cards = CardPositions {inHand = cards, onTable = []}
 
@@ -143,6 +153,38 @@ playAuctionAndRecord getBid raise players numberOfPlayers firstPlayer =
   fmap finishBidding .
   runStateT (playAuction getBid raise players numberOfPlayers firstPlayer)
 
+bid :: [Card] -> Bid
+bid [] = Pass
+bid cards = Raise cards
+
+getBidStateful :: 
+    (Traversable players, Eq player, Monad m) 
+  => (player -> [Card] -> m Bid) 
+  -> player -> StateT 
+  (players (player, CardPositions)) m Bid
+getBidStateful getBid player = StateT getBidStateful' where
+  getBidStateful' = undefined
+  
+
+playAuctionAndRecord2 ::
+     ( Foldable1 players
+     , Traversable players
+     , Eq player
+     , Monad f
+     , Monoid (players [Card])
+     , Cycling player
+     , Applicative players
+     )
+  => (player -> [Card] -> f Bid)
+  -> (player -> [Card] -> players [Card])
+  -> Int
+  -> player
+  -> players (player, CardPositions)
+  -> f (FinishedBidding players player)
+playAuctionAndRecord2 getBid raise numberOfPlayers firstPlayer cardPositions=
+  fmap finishBidding2 $
+  runStateT (playAuction (getBidStateful getBid) raise (fst <$> cardPositions) numberOfPlayers firstPlayer) cardPositions
+
 playerCards players cards = (,) <$> players <*> cards
 
 bidsByLastRaise ::
@@ -157,11 +199,6 @@ bidsByLastRaise bids lastRaised = sortOn playerIndex bids
 play3 getBid firstPlayer =
   playAuction getBid raiseThree tuple3Players 3 firstPlayer
 
-data ThreePlayers
-  = OneOfThree
-  | TwoOfThree
-  | ThreeOfThree
-  deriving (Eq, Enum, Show)
 
 raiseThree OneOfThree cards   = Tuple3 (cards, [], [])
 raiseThree TwoOfThree cards   = Tuple3 ([], cards, [])
@@ -176,13 +213,6 @@ players = state nextPlayer
   where
     nextPlayer player = (player, successor player)
 
-class Cycling a where
-  successor :: a -> a
-
-instance Cycling ThreePlayers where
-  successor ThreeOfThree = OneOfThree
-  successor other        = succ other
-
 newtype ViceBid =
   ViceBid [Card]
 
@@ -195,10 +225,11 @@ instance Ord ViceBid where
 instance Zeroed ViceBid where
   zero = ViceBid []
 
-data MaxBidders players bid = MaxBidders
-  { maxBid     :: bid
-  , maxBidders :: players
-  }
+data MaxBidders players bid =
+  MaxBidders
+    { maxBid     :: bid
+    , maxBidders :: players
+    }
 
 instance (Ord bid, Semigroup players) =>
          Semigroup (MaxBidders players bid) where

@@ -16,8 +16,7 @@ insertWith f k' v m k =
     else m k
 
 data MemoizedFunction k v =
-  MemoizedFunction (Map.Map k v)
-                   (k -> v)
+  MemoizedFunction (Map.Map k v) (k -> v)
 
 --apply :: Ord k => k -> State (MemoizedFunction k v) v
 --apply k = do

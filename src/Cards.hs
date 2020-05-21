@@ -23,10 +23,12 @@ data Suit
   | Green
   deriving (Enum, Eq, Show, Ord)
 
-data Card = Card
-  { suit :: Suit
-  , rank :: Rank
-  } deriving (Eq, Show, Ord)
+data Card =
+  Card
+    { suit :: Suit
+    , rank :: Rank
+    }
+  deriving (Eq, Show, Ord)
 
 points :: Rank -> Int
 points rank
@@ -58,8 +60,7 @@ fullDeck = deck allSuits
 
 data Trumps
   = SingleTrump Trump
-  | HigherLower Trump
-                Trump
+  | HigherLower Trump Trump
   deriving (Show)
 
 data Trump

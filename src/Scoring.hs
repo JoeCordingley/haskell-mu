@@ -139,7 +139,6 @@ type Scores player = Map player Score
 
 data FinishedRound player
   = FinishedViaStalemate (Stalemate player)
-  | FinishedViaCardPlay (TrumpsAndTeams player)
-                        (CardsWon player)
+  | FinishedViaCardPlay (TrumpsAndTeams player) (CardsWon player)
 
 type CardsWon player = Map player [Card]

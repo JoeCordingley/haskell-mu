@@ -14,10 +14,11 @@ import qualified Data.Map.Lazy            as Map
 import           TrickWinner
 import           Util
 
-data CardPlayState player = CardPlayState
-  { playerOrder   :: [player]
-  , cardPositions :: CardPositions player
-  }
+data CardPlayState player =
+  CardPlayState
+    { playerOrder   :: [player]
+    , cardPositions :: CardPositions player
+    }
 
 data PlayableCard
   = CardOnTable Card

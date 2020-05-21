@@ -18,7 +18,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-15.13
+resolver: lts-14.22
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -41,6 +41,7 @@ packages:
 extra-deps: 
 - hindent-5.3.1@sha256:23dc3d423820a1de4a11f54eb87992f2c9fa1b686b2230bb06d1af46edc85c4b,3452
 - stylish-haskell-0.9.4.4@sha256:ea514922e47ea05a924355a841abd26d18101037c46fbb90e201ae83582a8728,4953
+- servant-websockets-2.0.0@sha256:6e9e3600bced90fd52ed3d1bf632205cb21479075b20d6637153cc4567000234,2253
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -41,16 +41,19 @@ data FinishedBidding player
   = Successful (SuccessfulBidding player)
   | Unsuccessful (Stalemate player)
 
-data SuccessfulBidding player = SuccessfulBidding
-  { biddingWinners   :: Winners player
-  , successfulTopBid :: Int
-  , biddingPositions :: CardPositions player
-  }
+data SuccessfulBidding player =
+  SuccessfulBidding
+    { biddingWinners   :: Winners player
+    , successfulTopBid :: Int
+    , biddingPositions :: CardPositions player
+    }
 
-data CardPositions player = CardPositions
-  { cardsInHand  :: Map player [Card]
-  , cardsOnTable :: Map player [Card]
-  } deriving (Eq, Show)
+data CardPositions player =
+  CardPositions
+    { cardsInHand  :: Map player [Card]
+    , cardsOnTable :: Map player [Card]
+    }
+  deriving (Eq, Show)
 
 data AuctionStatus player
   = Unfinished
@@ -59,28 +62,29 @@ data AuctionStatus player
 
 data Winners player
   = ChiefOnly player
-  | ChiefAndVice player
-                 player
+  | ChiefAndVice player player
   deriving (Eq, Show)
 
 data AuctionResult player
-  = Result (Winners player)
-           (CardPositions player)
+  = Result (Winners player) (CardPositions player)
   | NoResult (Stalemate player)
   deriving (Eq, Show)
 
 data Stalemate player
   = EklatNoPoints
-  | Eklat { atFault  :: player
-          , affected :: [player]
-          , topBid   :: Int }
+  | Eklat
+      { atFault  :: player
+      , affected :: [player]
+      , topBid   :: Int
+      }
   deriving (Eq, Show)
 
-data AuctionState player = AuctionState
-  { auctionPositions :: CardPositions player
-  , passes           :: Int
-  , lastToRaise      :: [player]
-  }
+data AuctionState player =
+  AuctionState
+    { auctionPositions :: CardPositions player
+    , passes           :: Int
+    , lastToRaise      :: [player]
+    }
 
 auctionState ::
      Ord player => player -> Bid -> AuctionState player -> AuctionState player

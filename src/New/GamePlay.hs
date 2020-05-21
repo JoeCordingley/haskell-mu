@@ -35,30 +35,29 @@ playSetNumberOfRounds num playRound =
 playAndAdd :: (Functor f, Semigroup scores) => scores -> f scores -> f scores
 playAndAdd scores = fmap (scores <>)
 
-data Stages f players player playerSequence = Stages
-  { dealCards :: f (players [Card])
-  , runBidding :: players [Card] -> f (FinishedBidding players player)
-  , settleAuctionRound :: Winners player -> players CardPositions -> f (TrumpsAndChiefsTeam player)
-  , cardPlay :: Trumps -> player -> players CardPositions -> f (players [Card])
-  , scoreCardPlay :: TrumpsAndChiefsTeam player -> Int -> players [Card] -> players Int
-  , scoreStalemate :: Stalemate player -> players Int
-  , nextPlayer :: playerSequence -> playerSequence
-  }
+data Stages f players player playerSequence =
+  Stages
+    { dealCards :: f (players [Card])
+    , runBidding :: player -> players [Card] -> f (FinishedBidding players player)
+    , settleAuctionRound :: Winners player -> players CardPositions -> f (TrumpsAndChiefsTeam player)
+    , cardPlay :: Trumps -> player -> players CardPositions -> f (players [Card])
+    , scoreCardPlay :: TrumpsAndChiefsTeam player -> Int -> players [Card] -> players Int
+    , scoreStalemate :: Stalemate player -> players Int
+    }
 
 gameRound ::
-     (MonadState playerSequence f)
+     (Monad f)
   => Stages f players player playerSequence
+  -> player
   -> f (players Int)
-gameRound (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay scoreStalemate nextPlayer) = do
-  finishedBids <- dealCards >>= runBidding
-  scores <-
-    case finishedBids of
-      Successful (SuccessfulBidding winners topBid positions) -> do
-        trumpsAndTeams <- settleAuction winners positions
-        tricks <- cardPlay (trumps trumpsAndTeams) (chief winners) positions
-        return $ scoreCardPlay trumpsAndTeams topBid tricks
-      Unsuccessful stalemate -> return $ scoreStalemate stalemate
-  scores <$ modify nextPlayer
+gameRound (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay scoreStalemate ) firstPlayer = do
+  finishedBids <- dealCards >>= runBidding firstPlayer
+  case finishedBids of
+    Successful (SuccessfulBidding winners topBid positions) -> do
+      trumpsAndTeams <- settleAuction winners positions
+      tricks <- cardPlay (trumps trumpsAndTeams) (chief winners) positions
+      return $ scoreCardPlay trumpsAndTeams topBid tricks
+    Unsuccessful stalemate -> return $ scoreStalemate stalemate
 
 playMatch ::
      (Monad m, Monoid (scores Int), Foldable1 scores)

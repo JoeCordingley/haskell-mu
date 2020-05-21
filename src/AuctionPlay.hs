@@ -20,22 +20,19 @@ import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 import           Util
 
-data TrumpsAndChiefsTeam player = TrumpsAndChiefsTeam
-  { trumps     :: Trumps
-  , chiefsTeam :: Teams player
-  }
+data TrumpsAndChiefsTeam player =
+  TrumpsAndChiefsTeam
+    { trumps     :: Trumps
+    , chiefsTeam :: Teams player
+    }
 
 data TrumpsAndTeams player =
-  TrumpsAndTeams Trumps
-                 (Teams player)
-                 TopBid
-                 (CardPositions player)
+  TrumpsAndTeams Trumps (Teams player) TopBid (CardPositions player)
   deriving (Show)
 
 data Teams player
   = ChiefAlone player
-  | ChiefAndPartner player
-                    player
+  | ChiefAndPartner player player
   deriving (Show)
 
 data FinishedAuction player
@@ -43,11 +40,12 @@ data FinishedAuction player
   | UnsuccessfulAuction (Stalemate player)
   deriving (Show)
 
-data Interactions f player = Interactions
-  { getBid     :: Int -> player -> [Card] -> f Bid
-  , getTrump   :: player -> [Trump] -> f Trump
-  , getPartner :: player -> [player] -> f player
-  }
+data Interactions f player =
+  Interactions
+    { getBid     :: Int -> player -> [Card] -> f Bid
+    , getTrump   :: player -> [Trump] -> f Trump
+    , getPartner :: player -> [player] -> f player
+    }
 
 type NumberOfPlayers = Int
 

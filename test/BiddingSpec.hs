@@ -144,12 +144,13 @@ startingGen = do
   let players = [1 .. numberOfPlayers]
   dealCards players
 
-data Record = Record
-  { recordedMax    :: Int
-  , recordedPlayer :: Player
-  , recordedCards  :: [Card]
-  , recordedBid    :: Bid
-  }
+data Record =
+  Record
+    { recordedMax    :: Int
+    , recordedPlayer :: Player
+    , recordedCards  :: [Card]
+    , recordedBid    :: Bid
+    }
 
 type TestContext = WriterT [Record] Gen
 

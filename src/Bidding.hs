@@ -24,16 +24,18 @@ data Bid
   | Raise [Card]
   deriving (Show)
 
-data FinishedBidding player = FinishedBidding
-  { finishedCardsInHand  :: Map player [Card]
-  , finishedPlayerRaises :: [(player, [Card])]
-  }
+data FinishedBidding player =
+  FinishedBidding
+    { finishedCardsInHand  :: Map player [Card]
+    , finishedPlayerRaises :: [(player, [Card])]
+    }
 
-data BiddingState player = BiddingState
-  { cardsInHandSoFar  :: Map player [Card]
-  , passesSoFar       :: Int
-  , playerRaisesSoFar :: [(player, [Card])]
-  }
+data BiddingState player =
+  BiddingState
+    { cardsInHandSoFar  :: Map player [Card]
+    , passesSoFar       :: Int
+    , playerRaisesSoFar :: [(player, [Card])]
+    }
 
 initialState :: Ord player => [(player, [Card])] -> BiddingState player
 initialState initialHands =

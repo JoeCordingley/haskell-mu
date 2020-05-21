@@ -42,10 +42,11 @@ sortTraversal tr = runMono id . sortAp . tr liftMono
 sortOn :: (Ord b, Traversable t) => (a -> b) -> t a -> t a
 sortOn f = fmap originalValue . sortTraversable . fmap (sortOnObj f)
 
-data SortOn a b = SortOn
-  { sortedOn      :: a
-  , originalValue :: b
-  }
+data SortOn a b =
+  SortOn
+    { sortedOn      :: a
+    , originalValue :: b
+    }
 
 instance Eq a => Eq (SortOn a b) where
   SortOn l _ == SortOn r _ = l == r

@@ -22,6 +22,5 @@ remove x (y:ys)
 minus :: Eq a => [a] -> [a] -> [a]
 minus = foldr remove
 
-fmap' :: ((a -> r) -> r) -> (a -> (b -> r) -> r) -> (b -> r ) -> r
+fmap' :: ((a -> r) -> r) -> (a -> (b -> r) -> r) -> (b -> r) -> r
 fmap' fa f = \k -> fa $ \a -> f a k
-
