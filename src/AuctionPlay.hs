@@ -1,6 +1,5 @@
 module AuctionPlay
   ( Interactions(..)
-  , auctionRound
   , bidding
   , bidding2
   , Trumps(..)
@@ -9,7 +8,6 @@ module AuctionPlay
   , TrumpsAndChiefsTeam(..)
   , Teams(..)
   , FinishedAuction(..)
-  , settleAuction
   ) where
 
 import           AuctionFunctions
@@ -125,71 +123,71 @@ bidding' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
               auctionPositions state
             maxBidAllowed = maxBid + 1 - currentTotal
 
-getTrumps ::
-     (Ord player, Monad f)
-  => (player -> [Trump] -> f Trump)
-  -> Winners player
-  -> Map.Map player [Card]
-  -> f Trumps
-getTrumps getTrump (ChiefOnly chief) cardsBid =
-  fmap SingleTrump . getTrump chief . cardTrumps $
-  findOrEmptyList chief cardsBid
-getTrumps getTrump (ChiefAndVice chief vice) cardsBid = do
-  viceTrump <- getTrump vice . cardTrumps $ findOrEmptyList vice cardsBid
-  chiefTrump <-
-    getTrump chief . (NoTrump :) . remove viceTrump . cardTrumps $
-    findOrEmptyList chief cardsBid
-  return $ HigherLower chiefTrump viceTrump
+--getTrumps ::
+--     (Ord player, Monad f)
+--  => (player -> [Trump] -> f Trump)
+--  -> Winners player
+--  -> Map.Map player [Card]
+--  -> f Trumps
+--getTrumps getTrump (ChiefOnly chief) cardsBid =
+--  fmap SingleTrump . getTrump chief . cardTrumps $
+--  findOrEmptyList chief cardsBid
+--getTrumps getTrump (ChiefAndVice chief vice) cardsBid = do
+--  viceTrump <- getTrump vice . cardTrumps $ findOrEmptyList vice cardsBid
+--  chiefTrump <-
+--    getTrump chief . (NoTrump :) . remove viceTrump . cardTrumps $
+--    findOrEmptyList chief cardsBid
+--  return $ HigherLower chiefTrump viceTrump
 
-settleAuction ::
-     (Eq player, Ord player, Monad f)
-  => (player -> [Trump] -> f Trump)
-  -> (player -> [player] -> f player)
-  -> [player]
-  -> Winners player
-  -> CardPositions player
-  -> f (TrumpsAndChiefsTeam player)
-settleAuction getTrump getPartner players winners cardPositions = do
-  trumps <- getTrumps getTrump winners $ cardsOnTable cardPositions
-  teams <-
-    if numberOfPlayers == 3
-      then return $ ChiefAlone chief'
-      else fmap (ChiefAndPartner chief') . getPartner chief' $
-           potentialPartners winners
-  return $ TrumpsAndChiefsTeam trumps teams
-  where
-    chief' = chief winners
-    potentialPartners (ChiefOnly chief) = remove chief players
-    potentialPartners (ChiefAndVice chief vice) =
-      remove chief $ remove vice players
-    numberOfPlayers = length players
+--settleAuction ::
+--     (Eq player, Ord player, Monad f)
+--  => (player -> [Trump] -> f Trump)
+--  -> (player -> [player] -> f player)
+--  -> [player]
+--  -> Winners player
+--  -> CardPositions player
+--  -> f (TrumpsAndChiefsTeam player)
+--settleAuction getTrump getPartner players winners cardPositions = do
+--  trumps <- getTrumps getTrump winners $ cardsOnTable cardPositions
+--  teams <-
+--    if numberOfPlayers == 3
+--      then return $ ChiefAlone chief'
+--      else fmap (ChiefAndPartner chief') . getPartner chief' $
+--           potentialPartners winners
+--  return $ TrumpsAndChiefsTeam trumps teams
+--  where
+--    chief' = chief winners
+--    potentialPartners (ChiefOnly chief) = remove chief players
+--    potentialPartners (ChiefAndVice chief vice) =
+--      remove chief $ remove vice players
+--    numberOfPlayers = length players
 
-auctionRound ::
-     (Eq player, Ord player, Monad f)
-  => Interactions f player
-  -> [(player, [Card])]
-  -> f (FinishedAuction player)
-auctionRound interactions startingHands = do
-  (result, state) <- runStateT bidding' $ initialState startingHands
-  case result of
-    Result winners cardPositions -> do
-      trumps <-
-        getTrumps (getTrump interactions) winners . cardsOnTable $
-        auctionPositions state
-      teams <-
-        if numberOfPlayers == 3
-          then return $ ChiefAlone chief'
-          else fmap (ChiefAndPartner chief') . getPartner interactions chief' $
-               potentialPartners winners
-      let topBid = undefined
-      return . SuccessfulAuction $
-        TrumpsAndTeams trumps teams topBid cardPositions
-      where chief' = chief winners
-    NoResult stalemate -> return $ UnsuccessfulAuction stalemate
-  where
-    players = fst <$> startingHands
-    numberOfPlayers = length players
-    bidding' = bidding (getBid interactions) players
-    potentialPartners (ChiefOnly chief) = remove chief players
-    potentialPartners (ChiefAndVice chief vice) =
-      remove chief $ remove vice players
+--auctionRound ::
+--     (Eq player, Ord player, Monad f)
+--  => Interactions f player
+--  -> [(player, [Card])]
+--  -> f (FinishedAuction player)
+--auctionRound interactions startingHands = do
+--  (result, state) <- runStateT bidding' $ initialState startingHands
+--  case result of
+--    Result winners cardPositions -> do
+--      trumps <-
+--        getTrumps (getTrump interactions) winners . cardsOnTable $
+--        auctionPositions state
+--      teams <-
+--        if numberOfPlayers == 3
+--          then return $ ChiefAlone chief'
+--          else fmap (ChiefAndPartner chief') . getPartner interactions chief' $
+--               potentialPartners winners
+--      let topBid = undefined
+--      return . SuccessfulAuction $
+--        TrumpsAndTeams trumps teams topBid cardPositions
+--      where chief' = chief winners
+--    NoResult stalemate -> return $ UnsuccessfulAuction stalemate
+--  where
+--    players = fst <$> startingHands
+--    numberOfPlayers = length players
+--    bidding' = bidding (getBid interactions) players
+--    potentialPartners (ChiefOnly chief) = remove chief players
+--    potentialPartners (ChiefAndVice chief vice) =
+--      remove chief $ remove vice players

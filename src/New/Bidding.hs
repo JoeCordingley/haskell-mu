@@ -1,11 +1,12 @@
 module New.Bidding where
 
 import           AuctionFunctions          (Bid (..), Winners (..),
-                                            viceOrdering)
+                                            viceOrdering, Chief(..))
 import           Cards
 import           Control.Lens              hiding ((<.>))
 import           Control.Monad.State.Class
 import           Control.Monad.State.Lazy
+import           Data.Foldable             (toList)
 import           Data.Functor.Apply
 import           Data.List                 hiding (sortOn)
 import           Data.List.NonEmpty        (NonEmpty (..))
@@ -14,10 +15,9 @@ import           Data.Monoid
 import qualified Data.Semigroup            as Semi
 import           Data.Semigroup.Foldable
 import           Data.Tuple.Homogenous
+import           New.Players
 import           New.TupleInstances
 import           New.Util
-import Data.Foldable (toList)
-import New.Players
 
 data BiddingResult player
   = SuccessfulBiddingResult (WinnersAndTopBid player)
@@ -58,11 +58,13 @@ finishBidding ::
 finishBidding (SuccessfulBiddingResult (WinnersAndTopBid winners topBid), cardPositions) =
   Successful (SuccessfulBidding winners topBid cardPositions)
 
-finishBidding2 :: Functor players => 
-     (BiddingResult player, players (player, CardPositions))
+finishBidding2 ::
+     Functor players
+  => (BiddingResult player, players (player, CardPositions))
   -> FinishedBidding players player
 finishBidding2 (SuccessfulBiddingResult (WinnersAndTopBid winners topBid), cardPositions) =
   Successful (SuccessfulBidding winners topBid (snd <$> cardPositions))
+
 initialPositions :: [Card] -> CardPositions
 initialPositions cards = CardPositions {inHand = cards, onTable = []}
 
@@ -104,8 +106,8 @@ tallyAuction playerCards =
     successful = WinnersAndTopBid . winners
     winners chief =
       case vices chief of
-        [vice] -> ChiefAndVice chief vice
-        _      -> ChiefOnly chief
+        [vice] -> ChiefAndVice (Chief chief) vice
+        _      -> ChiefOnly (Chief chief)
     vices chief =
       maxBidders . foldMap viceBids . NE.filter (notPlayer chief) $
       toNonEmpty playerCards
@@ -126,12 +128,12 @@ playAuction ::
   => (player -> f Bid)
   -> (player -> [Card] -> players [Card])
   -> players player
-  -> Int
   -> player
   -> f (BiddingResult player)
-playAuction getBid raise players numberOfPlayers firstPlayer =
+playAuction getBid raise players firstPlayer =
   tallyAuction . uncurry bidsByLastRaise . over _1 (playerCards players) <$>
-  runAuction getBid raise numberOfPlayers firstPlayer
+  runAuction getBid raise n firstPlayer where
+    n = length players
 
 playAuctionAndRecord ::
      ( Foldable1 players1
@@ -145,45 +147,17 @@ playAuctionAndRecord ::
   => (player -> StateT (players2 CardPositions) f Bid)
   -> (player -> [Card] -> players1 [Card])
   -> players1 player
-  -> Int
   -> player
   -> players2 CardPositions
   -> f (FinishedBidding players2 player)
-playAuctionAndRecord getBid raise players numberOfPlayers firstPlayer =
+playAuctionAndRecord getBid raise players firstPlayer =
   fmap finishBidding .
-  runStateT (playAuction getBid raise players numberOfPlayers firstPlayer)
+  runStateT (playAuction getBid raise players firstPlayer)
 
 bid :: [Card] -> Bid
-bid [] = Pass
+bid []    = Pass
 bid cards = Raise cards
 
-getBidStateful :: 
-    (Traversable players, Eq player, Monad m) 
-  => (player -> [Card] -> m Bid) 
-  -> player -> StateT 
-  (players (player, CardPositions)) m Bid
-getBidStateful getBid player = StateT getBidStateful' where
-  getBidStateful' = undefined
-  
-
-playAuctionAndRecord2 ::
-     ( Foldable1 players
-     , Traversable players
-     , Eq player
-     , Monad f
-     , Monoid (players [Card])
-     , Cycling player
-     , Applicative players
-     )
-  => (player -> [Card] -> f Bid)
-  -> (player -> [Card] -> players [Card])
-  -> Int
-  -> player
-  -> players (player, CardPositions)
-  -> f (FinishedBidding players player)
-playAuctionAndRecord2 getBid raise numberOfPlayers firstPlayer cardPositions=
-  fmap finishBidding2 $
-  runStateT (playAuction (getBidStateful getBid) raise (fst <$> cardPositions) numberOfPlayers firstPlayer) cardPositions
 
 playerCards players cards = (,) <$> players <*> cards
 
@@ -196,22 +170,6 @@ bidsByLastRaise bids lastRaised = sortOn playerIndex bids
   where
     playerIndex (player, _) = elemIndex player lastRaised
 
-play3 getBid firstPlayer =
-  playAuction getBid raiseThree tuple3Players 3 firstPlayer
-
-
-raiseThree OneOfThree cards   = Tuple3 (cards, [], [])
-raiseThree TwoOfThree cards   = Tuple3 ([], cards, [])
-raiseThree ThreeOfThree cards = Tuple3 ([], [], cards)
-
-tuple3Players = Tuple3 (OneOfThree, TwoOfThree, ThreeOfThree)
-
-threePlayerSequence = cycle $ enumFrom OneOfThree
-
-players :: (Cycling player, MonadState player m) => m player
-players = state nextPlayer
-  where
-    nextPlayer player = (player, successor player)
 
 newtype ViceBid =
   ViceBid [Card]

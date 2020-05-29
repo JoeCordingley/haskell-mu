@@ -45,6 +45,9 @@ dependencies:
 - unordered-containers
 - async
 - hindent
+- protolude
+- validation
+
 
 
 library:

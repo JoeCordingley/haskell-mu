@@ -1,8 +1,7 @@
-module New.GamePlay
-  ( CardPositions(..)
-  ) where
+{-# LANGUAGE TupleSections #-}
+module New.GamePlay where
 
-import           AuctionFunctions          (Winners (..), chief)
+import           AuctionFunctions          (Winners (..), chief, Chief(..))
 import           AuctionPlay               (TrumpsAndChiefsTeam (..))
 import           Cards
 import           Control.Lens
@@ -12,6 +11,8 @@ import           Data.Semigroup
 import           Data.Semigroup.Foldable
 import           GamePlay                  (EndCondition (..))
 import           New.Bidding
+import New.Players
+import Control.Monad.State.Lazy
 
 playUntilScore ::
      (Monad m, Monoid (scores Int), Foldable1 scores)
@@ -35,22 +36,23 @@ playSetNumberOfRounds num playRound =
 playAndAdd :: (Functor f, Semigroup scores) => scores -> f scores -> f scores
 playAndAdd scores = fmap (scores <>)
 
-data Stages f players player playerSequence =
+
+data Stages f players player =
   Stages
     { dealCards :: f (players [Card])
     , runBidding :: player -> players [Card] -> f (FinishedBidding players player)
     , settleAuctionRound :: Winners player -> players CardPositions -> f (TrumpsAndChiefsTeam player)
-    , cardPlay :: Trumps -> player -> players CardPositions -> f (players [Card])
+    , cardPlay :: Trumps -> Chief player -> players CardPositions -> f (players [Card])
     , scoreCardPlay :: TrumpsAndChiefsTeam player -> Int -> players [Card] -> players Int
     , scoreStalemate :: Stalemate player -> players Int
     }
 
 gameRound ::
      (Monad f)
-  => Stages f players player playerSequence
+  => Stages f players player 
   -> player
   -> f (players Int)
-gameRound (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay scoreStalemate ) firstPlayer = do
+gameRound (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay scoreStalemate) firstPlayer = do
   finishedBids <- dealCards >>= runBidding firstPlayer
   case finishedBids of
     Successful (SuccessfulBidding winners topBid positions) -> do
@@ -58,6 +60,15 @@ gameRound (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay scor
       tricks <- cardPlay (trumps trumpsAndTeams) (chief winners) positions
       return $ scoreCardPlay trumpsAndTeams topBid tricks
     Unsuccessful stalemate -> return $ scoreStalemate stalemate
+
+playMu ::
+     (Monad m, Monoid (scores Int), Foldable1 scores, Cycling player)
+  => Stages m scores player 
+  -> EndCondition
+  -> player
+  -> m ( scores Int )
+playMu stages endCondition firstPlayer = evalStateT (playMatch endCondition stateful') firstPlayer where
+  stateful' = players >>= lift . gameRound stages
 
 playMatch ::
      (Monad m, Monoid (scores Int), Foldable1 scores)

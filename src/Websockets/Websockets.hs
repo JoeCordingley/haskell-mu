@@ -76,7 +76,7 @@ server stateRef name conn = keepAlive commmunication
     commmunication = do
       addConn'
       broadcastPlayers'
-      PlayerNumberRequest n <- receiveJSON conn
+      PlayerNumberRequest n <- receiveJSONOrServerError conn
       updated <- updatePlayer' n name
       traverse_ (broadcastUpdateToUsers n) updated
       wait conn
@@ -110,9 +110,15 @@ instance ToJSON NewPlayer where
   toJSON (NewPlayer number name) =
     object ["newPlayer" .= object ["number" .= number, "name" .= name]]
 
-receiveJSON ::
+receiveJSONOrServerError ::
      (MonadIO m, MonadError ServerError m, FromJSON a) => Connection -> m a
-receiveJSON = stringError . eitherDecode <=< liftIO . receiveData
+receiveJSONOrServerError = stringError <=< runExceptT . receiveJSON
+
+receiveJSON :: (MonadIO m, MonadError String m, FromJSON a) => Connection -> m a
+receiveJSON = liftEither . eitherDecode <=< liftIO . receiveData
+
+leftMap :: (MonadError e m, MonadError f n) => (e -> f) -> m a -> n a
+leftMap f = undefined
 
 sendJSON :: (ToJSON a, MonadIO m) => Connection -> a -> m ()
 sendJSON conn a = liftIO $ sendTextData conn (encode a)

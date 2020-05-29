@@ -6,7 +6,6 @@ import           AuctionFunctions         (Bid (..), CardPositions,
                                            FinishedBidding (..), Stalemate,
                                            SuccessfulBidding (..), Winners,
                                            chief)
-import           AuctionPlay              (bidding2, settleAuction)
 import           CardPlay                 (PlayableCard, playCards)
 import           Cards
 import           Control.Monad.State.Lazy
@@ -75,21 +74,21 @@ rotate (first:rest) = rest ++ [first]
 
 type DealCards f player = ([player] -> f [(player, [Card])])
 
-dependencies ::
-     (Ord player, Monad f)
-  => ([player] -> f [(player, [Card])])
-  -> (Int -> player -> [Card] -> f Bid)
-  -> (player -> [Trump] -> f Trump)
-  -> (player -> [player] -> f player)
-  -> (player -> [PlayableCard] -> f PlayableCard)
-  -> Dependencies f player
-dependencies dealCards getBid getTrump getPartner getCard =
-  Dependencies
-    { dealCards = dealCards
-    , runBidding = bidding2 getBid
-    , settleAuctionRound = settleAuction getTrump getPartner
-    , cardPlay = playCards getCard
-    }
+--dependencies ::
+--     (Ord player, Monad f)
+--  => ([player] -> f [(player, [Card])])
+--  -> (Int -> player -> [Card] -> f Bid)
+--  -> (player -> [Trump] -> f Trump)
+--  -> (player -> [player] -> f player)
+--  -> (player -> [PlayableCard] -> f PlayableCard)
+--  -> Dependencies f player
+--dependencies dealCards getBid getTrump getPartner getCard =
+--  Dependencies
+--    { dealCards = dealCards
+--    , runBidding = bidding2 getBid
+--    , settleAuctionRound = settleAuction getTrump getPartner
+--    , cardPlay = playCards getCard
+--    }
 
 data Dependencies f player =
   Dependencies
@@ -99,31 +98,31 @@ data Dependencies f player =
     , cardPlay :: Trumps -> player -> [player] -> CardPositions player -> f (Map player [Card])
     }
 
-gameRound ::
-     (Monad f, Ord player)
-  => Dependencies f player
-  -> (TrumpsAndChiefsTeam player -> TopBid -> Map player [Card] -> Scores player)
-  -> [player]
-  -> f (Scores player)
-gameRound (Dependencies dealCards runBidding settleAuction cardPlay) scoreCardPlay players = do
-  finishedBids <- dealCards players >>= runBidding
-  case finishedBids of
-    Successful (SuccessfulBidding winners topBid positions) -> do
-      trumpsAndTeams <- settleAuction players winners positions
-      tricks <-
-        cardPlay (trumps trumpsAndTeams) (chief winners) players positions
-      return $ scoreCardPlay trumpsAndTeams topBid tricks
-    Unsuccessful stalemate -> return $ stalemateScores stalemate
+--gameRound ::
+--     (Monad f, Ord player)
+--  => Dependencies f player
+--  -> (TrumpsAndChiefsTeam player -> TopBid -> Map player [Card] -> Scores player)
+--  -> [player]
+--  -> f (Scores player)
+--gameRound (Dependencies dealCards runBidding settleAuction cardPlay) scoreCardPlay players = do
+--  finishedBids <- dealCards players >>= runBidding
+--  case finishedBids of
+--    Successful (SuccessfulBidding winners topBid positions) -> do
+--      trumpsAndTeams <- settleAuction players winners positions
+--      tricks <-
+--        cardPlay (trumps trumpsAndTeams) (chief winners) players positions
+--      return $ scoreCardPlay trumpsAndTeams topBid tricks
+--    Unsuccessful stalemate -> return $ stalemateScores stalemate
 
-play ::
-     (Monad f, Ord player)
-  => Dependencies f player
-  -> EndCondition
-  -> [player]
-  -> f (Scores player)
-play dependencies endCondition players =
-  playToTheEnd gameRound' endCondition players
-  where
-    gameRound' = gameRound dependencies (scoreCardPlay (length players))
+--play ::
+--     (Monad f, Ord player)
+--  => Dependencies f player
+--  -> EndCondition
+--  -> [player]
+--  -> f (Scores player)
+--play dependencies endCondition players =
+--  playToTheEnd gameRound' endCondition players
+--  where
+--    gameRound' = gameRound dependencies (scoreCardPlay (length players))
 
 type TopBid = Int

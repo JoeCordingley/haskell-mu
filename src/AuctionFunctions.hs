@@ -19,6 +19,7 @@ module AuctionFunctions
   , finishBidding
   , SuccessfulBidding(..)
   , viceOrdering
+  , Chief(..)
   ) where
 
 import           Cards
@@ -61,8 +62,8 @@ data AuctionStatus player
   deriving (Eq, Show)
 
 data Winners player
-  = ChiefOnly player
-  | ChiefAndVice player player
+  = ChiefOnly (Chief player)
+  | ChiefAndVice (Chief player) player
   deriving (Eq, Show)
 
 data AuctionResult player
@@ -131,8 +132,8 @@ finishBidding numberOfPlayers cardPositions lastToRaise =
     else case leadersInOrderOfLastRaised of
            [chief] ->
              case vices of
-               [vice] -> finishWith $ ChiefAndVice chief vice
-               _      -> finishWith $ ChiefOnly chief
+               [vice] -> finishWith $ ChiefAndVice (Chief chief) vice
+               _      -> finishWith $ ChiefOnly (Chief chief)
            lastLeaderToRaise:others ->
              Unsuccessful
                Eklat
@@ -177,8 +178,8 @@ auctionStatus numberOfPlayers state =
         else case leadersInOrderOfLastRaised of
                [chief] ->
                  case vices of
-                   [vice] -> Result (ChiefAndVice chief vice) (cardPositions)
-                   _      -> Result (ChiefOnly chief) (cardPositions)
+                   [vice] -> Result (ChiefAndVice (Chief chief) vice) (cardPositions)
+                   _      -> Result (ChiefOnly (Chief chief)) (cardPositions)
                lastLeaderToRaise:others ->
                  NoResult
                    Eklat
@@ -239,7 +240,7 @@ validBid bid state = length bid <= oneAboveMax
       (maximum . Map.elems . bidTotals . cardsOnTable $ auctionPositions state) +
       1
 
-chief :: Winners player -> player
+chief :: Winners player -> Chief player
 chief (ChiefOnly chief')      = chief'
 chief (ChiefAndVice chief' _) = chief'
 
@@ -247,3 +248,5 @@ cardTrumps :: [Card] -> [Trump]
 cardTrumps cards = nub . concatMap suitAndRank $ cards
   where
     suitAndRank card = [SuitTrump $ suit card, RankTrump $ rank card]
+
+data Chief player = Chief player deriving (Eq, Show)
