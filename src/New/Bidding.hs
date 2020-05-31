@@ -1,7 +1,7 @@
 module New.Bidding where
 
-import           AuctionFunctions          (Bid (..), Winners (..),
-                                            viceOrdering, Chief(..))
+import           AuctionFunctions          (Bid (..), Chief (..), Winners (..),
+                                            viceOrdering)
 import           Cards
 import           Control.Lens              hiding ((<.>))
 import           Control.Monad.State.Class
@@ -132,7 +132,8 @@ playAuction ::
   -> f (BiddingResult player)
 playAuction getBid raise players firstPlayer =
   tallyAuction . uncurry bidsByLastRaise . over _1 (playerCards players) <$>
-  runAuction getBid raise n firstPlayer where
+  runAuction getBid raise n firstPlayer
+  where
     n = length players
 
 playAuctionAndRecord ::
@@ -151,13 +152,11 @@ playAuctionAndRecord ::
   -> players2 CardPositions
   -> f (FinishedBidding players2 player)
 playAuctionAndRecord getBid raise players firstPlayer =
-  fmap finishBidding .
-  runStateT (playAuction getBid raise players firstPlayer)
+  fmap finishBidding . runStateT (playAuction getBid raise players firstPlayer)
 
 bid :: [Card] -> Bid
 bid []    = Pass
 bid cards = Raise cards
-
 
 playerCards players cards = (,) <$> players <*> cards
 
@@ -169,7 +168,6 @@ bidsByLastRaise ::
 bidsByLastRaise bids lastRaised = sortOn playerIndex bids
   where
     playerIndex (player, _) = elemIndex player lastRaised
-
 
 newtype ViceBid =
   ViceBid [Card]

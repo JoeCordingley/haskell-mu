@@ -178,8 +178,9 @@ auctionStatus numberOfPlayers state =
         else case leadersInOrderOfLastRaised of
                [chief] ->
                  case vices of
-                   [vice] -> Result (ChiefAndVice (Chief chief) vice) (cardPositions)
-                   _      -> Result (ChiefOnly (Chief chief)) (cardPositions)
+                   [vice] ->
+                     Result (ChiefAndVice (Chief chief) vice) (cardPositions)
+                   _ -> Result (ChiefOnly (Chief chief)) (cardPositions)
                lastLeaderToRaise:others ->
                  NoResult
                    Eklat
@@ -249,4 +250,6 @@ cardTrumps cards = nub . concatMap suitAndRank $ cards
   where
     suitAndRank card = [SuitTrump $ suit card, RankTrump $ rank card]
 
-data Chief player = Chief player deriving (Eq, Show)
+data Chief player =
+  Chief player
+  deriving (Eq, Show)

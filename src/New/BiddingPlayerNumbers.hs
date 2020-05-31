@@ -57,9 +57,7 @@ biddingThreePlayers ::
   -> Tuple3 CardPositions
   -> f (FinishedBidding Tuple3 NOfThree)
 biddingThreePlayers =
-  biddingNPlayers
-    (Tuple3 (OneOfThree, TwoOfThree, ThreeOfThree))
-    threeLens
+  biddingNPlayers (Tuple3 (OneOfThree, TwoOfThree, ThreeOfThree)) threeLens
 
 biddingFourPlayers ::
      Monad f

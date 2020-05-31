@@ -1,18 +1,19 @@
 {-# LANGUAGE TupleSections #-}
+
 module New.GamePlay where
 
-import           AuctionFunctions          (Winners (..), chief, Chief(..))
+import           AuctionFunctions          (Chief (..), Winners (..), chief)
 import           AuctionPlay               (TrumpsAndChiefsTeam (..))
 import           Cards
 import           Control.Lens
 import           Control.Monad.Loops
 import           Control.Monad.State.Class
+import           Control.Monad.State.Lazy
 import           Data.Semigroup
 import           Data.Semigroup.Foldable
 import           GamePlay                  (EndCondition (..))
 import           New.Bidding
-import New.Players
-import Control.Monad.State.Lazy
+import           New.Players
 
 playUntilScore ::
      (Monad m, Monoid (scores Int), Foldable1 scores)
@@ -36,7 +37,6 @@ playSetNumberOfRounds num playRound =
 playAndAdd :: (Functor f, Semigroup scores) => scores -> f scores -> f scores
 playAndAdd scores = fmap (scores <>)
 
-
 data Stages f players player =
   Stages
     { dealCards :: f (players [Card])
@@ -47,11 +47,7 @@ data Stages f players player =
     , scoreStalemate :: Stalemate player -> players Int
     }
 
-gameRound ::
-     (Monad f)
-  => Stages f players player 
-  -> player
-  -> f (players Int)
+gameRound :: (Monad f) => Stages f players player -> player -> f (players Int)
 gameRound (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay scoreStalemate) firstPlayer = do
   finishedBids <- dealCards >>= runBidding firstPlayer
   case finishedBids of
@@ -63,12 +59,14 @@ gameRound (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay scor
 
 playMu ::
      (Monad m, Monoid (scores Int), Foldable1 scores, Cycling player)
-  => Stages m scores player 
+  => Stages m scores player
   -> EndCondition
   -> player
-  -> m ( scores Int )
-playMu stages endCondition firstPlayer = evalStateT (playMatch endCondition stateful') firstPlayer where
-  stateful' = players >>= lift . gameRound stages
+  -> m (scores Int)
+playMu stages endCondition firstPlayer =
+  evalStateT (playMatch endCondition stateful') firstPlayer
+  where
+    stateful' = players >>= lift . gameRound stages
 
 playMatch ::
      (Monad m, Monoid (scores Int), Foldable1 scores)

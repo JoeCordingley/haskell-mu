@@ -30,6 +30,7 @@ dependencies:
 - random-shuffle
 - MonadRandom
 - composition
+- composition-extra
 - monad-loops
 - tuples-homogenous-h98
 - free

@@ -122,7 +122,6 @@ bidding' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
               length . findOrEmptyList thisPlayer . cardsOnTable $
               auctionPositions state
             maxBidAllowed = maxBid + 1 - currentTotal
-
 --getTrumps ::
 --     (Ord player, Monad f)
 --  => (player -> [Trump] -> f Trump)
@@ -138,7 +137,6 @@ bidding' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
 --    getTrump chief . (NoTrump :) . remove viceTrump . cardTrumps $
 --    findOrEmptyList chief cardsBid
 --  return $ HigherLower chiefTrump viceTrump
-
 --settleAuction ::
 --     (Eq player, Ord player, Monad f)
 --  => (player -> [Trump] -> f Trump)
@@ -161,7 +159,6 @@ bidding' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
 --    potentialPartners (ChiefAndVice chief vice) =
 --      remove chief $ remove vice players
 --    numberOfPlayers = length players
-
 --auctionRound ::
 --     (Eq player, Ord player, Monad f)
 --  => Interactions f player

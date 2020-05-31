@@ -5,29 +5,29 @@
 
 module New.BiddingWebsockets where
 
-import           AuctionFunctions       (Bid (..))
-import           Control.Monad.IO.Class (MonadIO)
+import           AuctionFunctions         (Bid (..))
+import           Control.Monad.IO.Class   (MonadIO)
 import           Protolude
 
-import           Cards                  (Card (..), Suit (..))
-import           Control.Lens           hiding ((.=))
-import           Control.Monad.Except   (MonadError, liftEither)
-import           Control.Monad.Fail     (fail)
+import           Cards                    (Card (..), Suit (..))
+import           Control.Lens             hiding ((.=))
+import           Control.Monad.Except     (MonadError, liftEither)
+import           Control.Monad.Fail       (fail)
 import           Data.Aeson
-import qualified Data.Aeson             as JSON
-import qualified Data.List.Index        as List
-import qualified Data.Map.Lazy          as Map
-import           Data.Text              (pack)
-import           Data.Validation
-import           Network.WebSockets     (Connection)
-import           Servant.Server         (ServerError (..), err400)
-import           Websockets.Websockets  (receiveJSONOrServerError, sendJSON)
-import           Data.Tuple.Homogenous
-import New.Players
-import New.BiddingPlayerNumbers
+import qualified Data.Aeson               as JSON
+import qualified Data.List.Index          as List
+import qualified Data.Map.Lazy            as Map
 import           Data.Semigroup.Foldable
-import           New.Bidding              (CardPositions) 
+import           Data.Text                (pack)
+import           Data.Tuple.Homogenous
+import           Data.Validation
+import           Network.WebSockets       (Connection)
+import           New.Bidding              (CardPositions)
 import           New.Bidding              (FinishedBidding)
+import           New.BiddingPlayerNumbers
+import           New.Players
+import           Servant.Server           (ServerError (..), err400)
+import           Websockets.Websockets    (receiveJSONOrServerError, sendJSON)
 
 data BidRequest =
   BidRequest [IndexedValue Card]
@@ -84,9 +84,10 @@ getBidWS ::
 getBidWS cs l n cards = do
   sendJSON conn bidRequest
   response <- receiveJSONOrServerError conn
-  case response of 
+  case response of
     PassResponse -> pure Pass
-    RaiseResponse keys -> fmap Raise . liftEither . first unknownKey . values map $ keys
+    RaiseResponse keys ->
+      fmap Raise . liftEither . first unknownKey . values map $ keys
   where
     conn = view (l n) cs
     indexed = List.indexed cards
@@ -104,7 +105,6 @@ getBidWS cs l n cards = do
 --
 --getBidSixWS :: (MonadIO m, MonadError ServerError m) => Tuple6 Connection -> NOfSix -> [Card] -> m Bid
 --getBidSixWS cs = getBidWS cs sixLens
-
 biddingWS ::
      ( Foldable1 players
      , Traversable players
@@ -121,39 +121,39 @@ biddingWS ::
   -> player
   -> players CardPositions
   -> m (FinishedBidding players player)
-biddingWS cs players l = biddingNPlayers players l (getBidWS cs l) 
+biddingWS cs players l = biddingNPlayers players l (getBidWS cs l)
 
-biddingThreeWS
-  :: (MonadIO m, MonadError ServerError m) =>
-     Tuple3 Connection
-     -> NOfThree
-     -> Tuple3 CardPositions
-     -> m (FinishedBidding Tuple3 NOfThree)
-biddingThreeWS cs = biddingWS cs threePlayers threeLens 
+biddingThreeWS ::
+     (MonadIO m, MonadError ServerError m)
+  => Tuple3 Connection
+  -> NOfThree
+  -> Tuple3 CardPositions
+  -> m (FinishedBidding Tuple3 NOfThree)
+biddingThreeWS cs = biddingWS cs threePlayers threeLens
 
-biddingFourWS
-  :: (MonadIO m, MonadError ServerError m) =>
-     Tuple4 Connection
-     -> NOfFour
-     -> Tuple4 CardPositions
-     -> m (FinishedBidding Tuple4 NOfFour)
-biddingFourWS cs = biddingWS cs fourPlayers fourLens 
+biddingFourWS ::
+     (MonadIO m, MonadError ServerError m)
+  => Tuple4 Connection
+  -> NOfFour
+  -> Tuple4 CardPositions
+  -> m (FinishedBidding Tuple4 NOfFour)
+biddingFourWS cs = biddingWS cs fourPlayers fourLens
 
-biddingFiveWS
-  :: (MonadIO m, MonadError ServerError m) =>
-     Tuple5 Connection
-     -> NOfFive
-     -> Tuple5 CardPositions
-     -> m (FinishedBidding Tuple5 NOfFive)
-biddingFiveWS cs = biddingWS cs fivePlayers fiveLens 
+biddingFiveWS ::
+     (MonadIO m, MonadError ServerError m)
+  => Tuple5 Connection
+  -> NOfFive
+  -> Tuple5 CardPositions
+  -> m (FinishedBidding Tuple5 NOfFive)
+biddingFiveWS cs = biddingWS cs fivePlayers fiveLens
 
-biddingSixWS
-  :: (MonadIO m, MonadError ServerError m) =>
-     Tuple6 Connection
-     -> NOfSix
-     -> Tuple6 CardPositions
-     -> m (FinishedBidding Tuple6 NOfSix)
-biddingSixWS cs = biddingWS cs sixPlayers sixLens 
+biddingSixWS ::
+     (MonadIO m, MonadError ServerError m)
+  => Tuple6 Connection
+  -> NOfSix
+  -> Tuple6 CardPositions
+  -> m (FinishedBidding Tuple6 NOfSix)
+biddingSixWS cs = biddingWS cs sixPlayers sixLens
 
 values :: Ord k => Map k v -> [k] -> Either (NonEmpty k) [v]
 values m = toEither . traverse get'

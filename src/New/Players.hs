@@ -3,8 +3,8 @@
 module New.Players where
 
 import           Control.Lens
+import           Control.Monad.State.Lazy
 import           Data.Tuple.Homogenous
-import Control.Monad.State.Lazy
 
 class Cycling a where
   successor :: a -> a
@@ -111,12 +111,12 @@ instance Cycling NOfSix where
 
 threePlayers = Tuple3 (OneOfThree, TwoOfThree, ThreeOfThree)
 
-fourPlayers =  Tuple4 (OneOfFour, TwoOfFour, ThreeOfFour, FourOfFour)
+fourPlayers = Tuple4 (OneOfFour, TwoOfFour, ThreeOfFour, FourOfFour)
 
-fivePlayers =  Tuple5 (OneOfFive, TwoOfFive, ThreeOfFive, FourOfFive, FiveOfFive)
+fivePlayers = Tuple5 (OneOfFive, TwoOfFive, ThreeOfFive, FourOfFive, FiveOfFive)
 
-sixPlayers =  Tuple6 (OneOfSix, TwoOfSix, ThreeOfSix, FourOfSix, FiveOfSix, SixOfSix)
-
+sixPlayers =
+  Tuple6 (OneOfSix, TwoOfSix, ThreeOfSix, FourOfSix, FiveOfSix, SixOfSix)
 
 players :: (Cycling player, MonadState player m) => m player
 players = state nextPlayer

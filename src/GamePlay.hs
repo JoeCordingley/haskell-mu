@@ -89,7 +89,6 @@ type DealCards f player = ([player] -> f [(player, [Card])])
 --    , settleAuctionRound = settleAuction getTrump getPartner
 --    , cardPlay = playCards getCard
 --    }
-
 data Dependencies f player =
   Dependencies
     { dealCards :: [player] -> f [(player, [Card])]
@@ -113,7 +112,6 @@ data Dependencies f player =
 --        cardPlay (trumps trumpsAndTeams) (chief winners) players positions
 --      return $ scoreCardPlay trumpsAndTeams topBid tricks
 --    Unsuccessful stalemate -> return $ stalemateScores stalemate
-
 --play ::
 --     (Monad f, Ord player)
 --  => Dependencies f player
@@ -124,5 +122,4 @@ data Dependencies f player =
 --  playToTheEnd gameRound' endCondition players
 --  where
 --    gameRound' = gameRound dependencies (scoreCardPlay (length players))
-
 type TopBid = Int
