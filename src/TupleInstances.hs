@@ -62,3 +62,15 @@ instance Foldable1 Tuple6 where
 instance Traversable1 Tuple3 where
   traverse1 f (Tuple3 (a1, a2, a3)) =
     fmap Tuple3 $ (,,) <$> f a1 <.> f a2 <.> f a3
+
+instance Traversable1 Tuple4 where
+  traverse1 f (Tuple4 (a1, a2, a3, a4)) =
+    fmap Tuple4 $ (,,,) <$> f a1 <.> f a2 <.> f a3 <.> f a4
+
+instance Traversable1 Tuple5 where
+  traverse1 f (Tuple5 (a1, a2, a3, a4, a5)) =
+    fmap Tuple5 $ (,,,,) <$> f a1 <.> f a2 <.> f a3 <.> f a4 <.> f a5
+
+instance Traversable1 Tuple6 where
+  traverse1 f (Tuple6 (a1, a2, a3, a4, a5, a6)) =
+    fmap Tuple6 $ (,,,,,) <$> f a1 <.> f a2 <.> f a3 <.> f a4 <.> f a5 <.> f a6

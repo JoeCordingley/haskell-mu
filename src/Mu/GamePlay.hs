@@ -16,8 +16,8 @@ import           Mu.Players
 import           Util                      (mapToSnd)
 
 data EndCondition
-  = NumberOfRounds Int
-  | ScoreGoal Int
+  = SetNumberOfRounds Int
+  | ScoreGoal Score
 
 playUntilScore ::
      (Monad m, Monoid (players score), Foldable1 players, Ord score)
@@ -41,32 +41,32 @@ playSetNumberOfRounds num playRound =
 playAndAdd :: (Functor f, Semigroup scores) => scores -> f scores -> f scores
 playAndAdd scores = fmap (scores <>)
 
-data Stages f players player scores =
+data Stages f players player =
   Stages
     { dealCards :: f (players [Card])
     , runBidding :: player -> players [Card] -> f (FinishedBidding players player)
     , settleAuctionRound :: (Chief player, [Card]) -> Maybe ( Vice player
                                                             , [Card]) -> f (TrumpsAndPartner player)
     , cardPlay :: ChiefTrump -> Maybe ViceTrump -> Chief player -> players CardPositions -> f (players [Card])
-    , scoreCardPlay :: Chief player -> ChiefTrump -> Maybe (Partner player) -> TopBid -> players [Card] -> scores
-    , scoreStalemate :: Stalemate player -> scores
+    , scoreCardPlay :: Chief player -> ChiefTrump -> Maybe (Partner player) -> CardsBid -> players [Card] -> players Score
+    , scoreStalemate :: Stalemate player -> players Score
     }
 
-data Dependencies player players =
+data Dependencies f players player =
   Dependencies
-    { getBid        :: player -> [Card] -> Bid
-    , getViceTrump  :: Vice player -> [Card] -> Trump
-    , getChiefTrump :: Chief player -> [Card] -> Trump
-    , getPartner    :: Chief player -> players player -> Partner player
-    , getCard       :: player -> [PlayableCard] -> Card
+    { getBid        :: player -> [Card] -> f Bid
+    , getViceTrump  :: Vice player -> [Card] -> f ViceTrump
+    , getChiefTrump :: Chief player -> [Card] -> f ChiefTrump
+    , getPartner    :: Chief player -> players player -> f (Partner player)
+    , getCard       :: player -> [PlayableCard] -> f PlayableCard
     }
 
 gameRound ::
      (Monad f, Functor players)
   => (player -> players CardPositions -> CardPositions)
-  -> Stages f players player scores
+  -> Stages f players player 
   -> player
-  -> f scores
+  -> f (players Score)
 gameRound f (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay scoreStalemate) firstPlayer = do
   finishedBids <- dealCards >>= runBidding firstPlayer
   case finishedBids of
@@ -82,25 +82,25 @@ gameRound f (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay sc
 
 playMu ::
      ( Monad m
-     , Monoid (players Int)
+     , Monoid (players Score)
      , Foldable1 players
      , Cycling player
      , Functor players
      )
   => (player -> players CardPositions -> CardPositions)
-  -> Stages m players player (players Int)
+  -> Stages m players player 
   -> EndCondition
   -> player
-  -> m (players Int)
+  -> m (players Score)
 playMu f stages endCondition firstPlayer =
   evalStateT (playMatch endCondition stateful') firstPlayer
   where
     stateful' = players >>= lift . gameRound f stages
 
 playMatch ::
-     (Monad m, Monoid (players Int), Foldable1 players)
+     (Monad m, Monoid (players Score), Foldable1 players)
   => EndCondition
-  -> m (players Int)
-  -> m (players Int)
-playMatch (NumberOfRounds num) = playSetNumberOfRounds num
+  -> m (players Score)
+  -> m (players Score)
+playMatch (SetNumberOfRounds num) = playSetNumberOfRounds num
 playMatch (ScoreGoal goal)     = playUntilScore goal

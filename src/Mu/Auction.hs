@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes     #-}
 
@@ -20,6 +21,10 @@ import           Data.Tuple.Homogenous
 import           Mu.Players
 import           TupleInstances
 import           Util
+
+newtype CardsBid =
+  CardsBid Int
+  deriving (Eq, Ord, Show, Num, Enum)
 
 data Bid
   = Pass
@@ -57,12 +62,12 @@ compareLength :: [a] -> [b] -> Ordering
 compareLength as bs = compare (length as) (length bs)
 
 data WinnersAndTopBid player =
-  WinnersAndTopBid (Chief player) (Maybe (Vice player)) TopBid
+  WinnersAndTopBid (Chief player) (Maybe (Vice player)) CardsBid
 
 data Stalemate player
   = EklatNoPoints
   | Eklat
-      { topBid   :: TopBid
+      { topBid   :: CardsBid
       , atFault  :: player
       , affected :: NonEmpty player
       }
@@ -72,9 +77,6 @@ data FinishedBidding players player
   = Successful (SuccessfulBidding players player)
   | Unsuccessful (Stalemate player)
 
-newtype TopBid =
-  TopBid Int
-  deriving (Show, Eq, Ord)
 
 newtype Vice player =
   Vice
@@ -85,7 +87,7 @@ data SuccessfulBidding players player =
   SuccessfulBidding
     { chief            :: Chief player
     , vice             :: Maybe (Vice player)
-    , successfulTopBid :: TopBid
+    , successfulTopBid :: CardsBid
     , biddingPositions :: players CardPositions
     }
 
@@ -130,7 +132,7 @@ tallyAuction ::
   => players (player, [Card])
   -> BiddingResult player
 tallyAuction playerCards =
-  if topBid == TopBid (0)
+  if topBid == CardsBid (0)
     then UnsuccessfulBiddingResult (EklatNoPoints)
     else case NE.reverse maxBidders' of
            chief :| [] ->
@@ -151,7 +153,7 @@ tallyAuction playerCards =
     notPlayer player = (/= player) . fst
     viceBids (player, cards) = MaxBidders (ViceBid cards) [player]
     playerBids (player, cards) =
-      MaxBidders (Semi.Max (TopBid (length cards))) (player :| [])
+      MaxBidders (Semi.Max (CardsBid (length cards))) (player :| [])
 
 playAuction ::
      ( Foldable1 players
@@ -259,7 +261,7 @@ newtype ViceTrump =
   ViceTrump Trump
 
 newtype Partner player =
-  Partner player
+  Partner player deriving Eq
 
 data TrumpsAndPartner player =
   TrumpsAndPartner

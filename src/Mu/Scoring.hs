@@ -10,28 +10,24 @@ import           Data.Foldable      (find)
 import           Data.List.NonEmpty ((<|))
 import           Data.Monoid        (Endo (..))
 import           Data.Semigroup     (Sum (..))
-import           Mu.Auction         (Chief (..), Stalemate (..), TopBid (..),
-                                     TrumpsAndPartner (..))
+import           Mu.Auction         (Chief (..), Stalemate (..), 
+                                     TrumpsAndPartner (..), CardsBid(..), Partner(..))
 
 newtype NumberOfPlayers =
   NumberOfPlayers Int
 
-newtype CardsBid =
-  CardsBid Int
-  deriving (Num, Enum, Eq, Ord)
-
 scoreStalemate ::
      (Monoid scores, Eq player)
-  => (player -> ASetter' scores Int)
+  => (player -> ASetter' scores Score)
   -> Stalemate player
   -> scores
 scoreStalemate _ EklatNoPoints = mempty
-scoreStalemate l Eklat {topBid = TopBid topBid, atFault, affected} =
+scoreStalemate l Eklat {topBid = CardsBid topBid, atFault, affected} =
   setScores mempty
   where
     setScores = appEndo $ foldMap Endo setters
-    setAtFault = set (l atFault) (-10 * topBid)
-    setAffected = fmap (\p -> set (l p) (5 * topBid)) affected
+    setAtFault = set (l atFault) (Score (-10 * topBid))
+    setAffected = fmap (\p -> set (l p) (Score (5 * topBid))) affected
     setters = setAtFault <| setAffected
 
 scoreCardPlay ::
@@ -40,7 +36,7 @@ scoreCardPlay ::
   -> f player
   -> Chief player
   -> ChiefTrump
-  -> Maybe player
+  -> Maybe (Partner player)
   -> CardsBid
   -> f (t Card)
   -> f Score
@@ -51,9 +47,9 @@ scoreCardPlay l players (Chief chief) (ChiefTrump chiefTrump) partner cardsBid c
     bonusPoints = fmap setBonus players
     chiefsTeamScores = chiefScore <> partnerScore
     chiefScore = view (l chief) cardPoints
-    partnerScore = foldMap (\p -> view (l p) cardPoints) partner
+    partnerScore = foldMap (\(Partner p) -> view (l p) cardPoints) partner
     isChief player = player == chief
-    isPartner player = elem player partner
+    isPartner player = elem (Partner player) partner
     isChiefsTeam player = isChief player || isPartner player
     numberOfPlayers = NumberOfPlayers $ length players
     setBonus player =
