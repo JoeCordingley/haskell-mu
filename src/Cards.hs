@@ -1,14 +1,8 @@
-module Cards
-  ( someFunc
-  , Card(..)
-  , Suit(..)
-  , Rank
-  , points
-  , fullDeck
-  , reducedDeck
-  , Trumps(..)
-  , Trump(..)
-  ) where
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
+module Cards where
+
+import           Data.Monoid (Sum)
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
@@ -30,7 +24,18 @@ data Card =
     }
   deriving (Eq, Show, Ord)
 
-points :: Rank -> Int
+newtype Score =
+  Score
+    { getScore :: Int
+    }
+  deriving (Num, Eq, Ord)
+
+instance Semigroup Score where
+  Score l <> Score r = Score (l + r)
+instance Monoid Score where
+  mempty = Score 0
+
+points :: Rank -> Score
 points rank
   | elem rank [6, 7] = 2
   | elem rank [1, 9] = 0
@@ -58,13 +63,15 @@ reducedDeck = deck reducedSuits
 
 fullDeck = deck allSuits
 
-data Trumps
-  = SingleTrump Trump
-  | HigherLower Trump Trump
-  deriving (Show)
+newtype ChiefTrump = ChiefTrump Trump
+
+--data Trumps = Trumps { chiefTrump :: Trump, viceTrump :: Maybe Trump }
+--  deriving (Show)
+
 
 data Trump
   = SuitTrump Suit
   | RankTrump Int
   | NoTrump
   deriving (Eq, Show)
+

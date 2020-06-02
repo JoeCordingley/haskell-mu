@@ -14,16 +14,16 @@ import           Scoring
 --    Unsuccessful stalemate -> return $ FinishedViaStalemate stalemate
 --    Successful trumpsAndTeams -> fmap (\cardsWon -> FinishedViaCardPlay trumpsAndTeams cardsWon) $ playCards trumpsAndTeams
 --  return undefined
-gameRound ::
-     Monad f
-  => f [(player, [Card])]
-  -> ([(player, [Card])] -> f (FinishedAuction player))
-  -> (TrumpsAndTeams player -> f (CardsWon player))
-  -> f (FinishedRound player)
-gameRound dealCards playAuction playCards =
-  dealCards >>= playAuction >>= finishRound
-  where
-    finishRound (UnsuccessfulAuction stalemate) =
-      return $ FinishedViaStalemate stalemate
-    finishRound (SuccessfulAuction trumpsAndTeams) =
-      FinishedViaCardPlay trumpsAndTeams <$> playCards trumpsAndTeams
+--gameRound ::
+--     Monad f
+--  => f [(player, [Card])]
+--  -> ([(player, [Card])] -> f (FinishedAuction player))
+--  -> (TrumpsAndTeams player -> f (CardsWon player))
+--  -> f (FinishedRound player)
+--gameRound dealCards playAuction playCards =
+--  dealCards >>= playAuction >>= finishRound
+--  where
+--    finishRound (UnsuccessfulAuction stalemate) =
+--      return $ FinishedViaStalemate stalemate
+--    finishRound (SuccessfulAuction trumpsAndTeams) =
+--      FinishedViaCardPlay trumpsAndTeams <$> playCards trumpsAndTeams

@@ -9,14 +9,11 @@ module AuctionFunctions
   , auctionState
   , cardTrumps
   , minus
-  , auctionStatus
   , initialState
-  , chief
   , Winners(..)
   , CardPositions(..)
   , FinishedBidding(..)
   , TopBid
-  , finishBidding
   , SuccessfulBidding(..)
   , viceOrdering
   , Chief(..)
@@ -36,7 +33,7 @@ data Bid
   | Raise [Card]
   deriving (Show, Eq)
 
-type TopBid = Int
+newtype TopBid = TopBid Int deriving (Eq, Ord)
 
 data FinishedBidding player
   = Successful (SuccessfulBidding player)
@@ -61,9 +58,7 @@ data AuctionStatus player
   | Finished (AuctionResult player)
   deriving (Eq, Show)
 
-data Winners player
-  = ChiefOnly (Chief player)
-  | ChiefAndVice (Chief player) player
+data Winners player = Winners { chief :: Chief player, vice :: Maybe player }
   deriving (Eq, Show)
 
 data AuctionResult player
@@ -120,89 +115,89 @@ type NumberOfPlayers = Int
 bidTotals :: Map player [Card] -> Map player Int
 bidTotals cardsBid = Map.map length cardsBid
 
-finishBidding ::
-     Ord player
-  => NumberOfPlayers
-  -> CardPositions player
-  -> [player]
-  -> FinishedBidding player
-finishBidding numberOfPlayers cardPositions lastToRaise =
-  if null lastToRaise
-    then Unsuccessful EklatNoPoints
-    else case leadersInOrderOfLastRaised of
-           [chief] ->
-             case vices of
-               [vice] -> finishWith $ ChiefAndVice (Chief chief) vice
-               _      -> finishWith $ ChiefOnly (Chief chief)
-           lastLeaderToRaise:others ->
-             Unsuccessful
-               Eklat
-                 { atFault = lastLeaderToRaise
-                 , affected = others
-                 , topBid = maxBid
-                 }
-  where
-    finishWith winners =
-      Successful
-        SuccessfulBidding
-          { biddingWinners = winners
-          , biddingPositions = cardPositions
-          , successfulTopBid = maxBid
-          }
-    totals = bidTotals cardsBid
-    maxBid = maximum $ 0 : Map.elems totals
-    leaders = Map.keys $ Map.filter (== maxBid) $ totals
-    leadersInOrderOfLastRaised = sortOn lastToRaiseIndex leaders
-    lastToRaiseIndex a = elemIndex a lastToRaise
-    cardsBid = cardsOnTable cardPositions
-    vices =
-      case leaders of
-        [leader] -> map fst . maximumsBy compareByCards $ Map.toList otherTotals
-          where otherTotals = Map.delete leader cardsBid
-                compareByCards (_, as) (_, bs) = viceOrdering as bs
-        _ -> []
+--finishBidding ::
+--     Ord player
+--  => NumberOfPlayers
+--  -> CardPositions player
+--  -> [player]
+--  -> FinishedBidding player
+--finishBidding numberOfPlayers cardPositions lastToRaise =
+--  if null lastToRaise
+--    then Unsuccessful EklatNoPoints
+--    else case leadersInOrderOfLastRaised of
+--           [chief] ->
+--             case vices of
+--               [vice] -> finishWith $ ChiefAndVice (Chief chief) vice
+--               _      -> finishWith $ ChiefOnly (Chief chief)
+--           lastLeaderToRaise:others ->
+--             Unsuccessful
+--               Eklat
+--                 { atFault = lastLeaderToRaise
+--                 , affected = others
+--                 , topBid = maxBid
+--                 }
+--  where
+--    finishWith winners =
+--      Successful
+--        SuccessfulBidding
+--          { biddingWinners = winners
+--          , biddingPositions = cardPositions
+--          , successfulTopBid = maxBid
+--          }
+--    totals = bidTotals cardsBid
+--    maxBid = maximum $ 0 : Map.elems totals
+--    leaders = Map.keys $ Map.filter (== maxBid) $ totals
+--    leadersInOrderOfLastRaised = sortOn lastToRaiseIndex leaders
+--    lastToRaiseIndex a = elemIndex a lastToRaise
+--    cardsBid = cardsOnTable cardPositions
+--    vices =
+--      case leaders of
+--        [leader] -> map fst . maximumsBy compareByCards $ Map.toList otherTotals
+--          where otherTotals = Map.delete leader cardsBid
+--                compareByCards (_, as) (_, bs) = viceOrdering as bs
+--        _ -> []
 
-auctionStatus ::
-     Ord player
-  => NumberOfPlayers
-  -> AuctionState player
-  -> AuctionStatus player
-auctionStatus numberOfPlayers state =
-  if passes' < numberOfPlayers
-    then Unfinished
-    else Finished result
-  where
-    result =
-      if null lastToRaise'
-        then NoResult EklatNoPoints
-        else case leadersInOrderOfLastRaised of
-               [chief] ->
-                 case vices of
-                   [vice] ->
-                     Result (ChiefAndVice (Chief chief) vice) (cardPositions)
-                   _ -> Result (ChiefOnly (Chief chief)) (cardPositions)
-               lastLeaderToRaise:others ->
-                 NoResult
-                   Eklat
-                     { atFault = lastLeaderToRaise
-                     , affected = others
-                     , topBid = maxBid
-                     }
-    lastToRaise' = lastToRaise state
-    passes' = passes state
-    totals = bidTotals cardsBid
-    maxBid = maximum $ 0 : Map.elems totals
-    leaders = Map.keys $ Map.filter (== maxBid) $ totals
-    leadersInOrderOfLastRaised = sortOn lastToRaiseIndex leaders
-    lastToRaiseIndex a = elemIndex a lastToRaise'
-    cardPositions = auctionPositions state
-    cardsBid = cardsOnTable cardPositions
-    vices =
-      case leaders of
-        [leader] -> map fst . maximumsBy compareByCards $ Map.toList otherTotals
-          where otherTotals = Map.delete leader cardsBid
-                compareByCards (_, as) (_, bs) = viceOrdering as bs
-        _ -> []
+--auctionStatus ::
+--     Ord player
+--  => NumberOfPlayers
+--  -> AuctionState player
+--  -> AuctionStatus player
+--auctionStatus numberOfPlayers state =
+--  if passes' < numberOfPlayers
+--    then Unfinished
+--    else Finished result
+--  where
+--    result =
+--      if null lastToRaise'
+--        then NoResult EklatNoPoints
+--        else case leadersInOrderOfLastRaised of
+--               [chief] ->
+--                 case vices of
+--                   [vice] ->
+--                     Result (ChiefAndVice (Chief chief) vice) (cardPositions)
+--                   _ -> Result (ChiefOnly (Chief chief)) (cardPositions)
+--               lastLeaderToRaise:others ->
+--                 NoResult
+--                   Eklat
+--                     { atFault = lastLeaderToRaise
+--                     , affected = others
+--                     , topBid = maxBid
+--                     }
+--    lastToRaise' = lastToRaise state
+--    passes' = passes state
+--    totals = bidTotals cardsBid
+--    maxBid = maximum $ 0 : Map.elems totals
+--    leaders = Map.keys $ Map.filter (== maxBid) $ totals
+--    leadersInOrderOfLastRaised = sortOn lastToRaiseIndex leaders
+--    lastToRaiseIndex a = elemIndex a lastToRaise'
+--    cardPositions = auctionPositions state
+--    cardsBid = cardsOnTable cardPositions
+--    vices =
+--      case leaders of
+--        [leader] -> map fst . maximumsBy compareByCards $ Map.toList otherTotals
+--          where otherTotals = Map.delete leader cardsBid
+--                compareByCards (_, as) (_, bs) = viceOrdering as bs
+--        _ -> []
 
 compareLength :: [a] -> [b] -> Ordering
 compareLength as bs = compare (length as) (length bs)
@@ -241,9 +236,6 @@ validBid bid state = length bid <= oneAboveMax
       (maximum . Map.elems . bidTotals . cardsOnTable $ auctionPositions state) +
       1
 
-chief :: Winners player -> Chief player
-chief (ChiefOnly chief')      = chief'
-chief (ChiefAndVice chief' _) = chief'
 
 cardTrumps :: [Card] -> [Trump]
 cardTrumps cards = nub . concatMap suitAndRank $ cards

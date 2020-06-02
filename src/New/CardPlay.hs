@@ -4,33 +4,34 @@
 module New.CardPlay where
 
 import           AuctionFunctions           (Chief (..))
-import           Cards                      (Card (..), Suit, Trump (..),
-                                             Trumps (..))
+import           Cards                      (Card (..), Suit, Trump (..), ChiefTrump(..))
 import           Control.Lens
 import           Control.Monad              (replicateM)
 import           Control.Monad.State.Lazy
 import           Data.Foldable              (fold)
 import           Data.Foldable              (toList)
+import           Data.Function.Syntax
 import           Data.Functor.Apply
 import           Data.Semigroup
 import           Data.Semigroup.Foldable
 import           Data.Semigroup.Traversable
-import           New.Bidding                (CardPositions(..))
+import           New.Bidding                (CardPositions (..))
 import           New.Players
 import           Util                       (remove)
-import Data.Function.Syntax
+import AuctionPlay (ViceTrump(..))
 
 newtype NumberOfRounds =
   NumberOfRounds Int
 
 type PlayableCard = (Card, CardPosition)
 
-data CardPosition 
+data CardPosition
   = InHand
-  | OnTable deriving Eq
+  | OnTable
+  deriving (Eq)
 
 playableCards :: CardPositions -> [PlayableCard]
-playableCards c = (fmap (,InHand) (inHand c)) <> (fmap (,OnTable) (onTable c))
+playableCards c = (fmap (, InHand) (inHand c)) <> (fmap (, OnTable) (onTable c))
 
 playCardsStateful ::
      ( Monoid (players [Card])
@@ -42,12 +43,13 @@ playCardsStateful ::
   => (forall c. player -> Lens' (players c) c)
   -> (player -> [PlayableCard] -> m PlayableCard)
   -> NumberOfRounds
-  -> Trumps
+  -> ChiefTrump 
+  -> Maybe ViceTrump 
   -> Chief player
   -> players CardPositions
   -> m (players [Card])
 playCardsStateful l getCardFromAvailable =
-  fmap playableCards -.*** evalStateT .** playCards l (StateT . getCard) 
+  fmap playableCards -.**** evalStateT .*** playCards l (StateT . getCard)
   where
     getCard player cards =
       removeFrom player cards <$>
@@ -65,14 +67,15 @@ playCards ::
   => (player -> ASetter' (players [Card]) [Card])
   -> (player -> m Card)
   -> NumberOfRounds
-  -> Trumps
+  -> ChiefTrump
+  -> Maybe ViceTrump
   -> Chief player
   -> m (players [Card])
-playCards l getCard (NumberOfRounds numberOfRounds) trumps (Chief firstPlayer) =
+playCards l getCard (NumberOfRounds numberOfRounds) chiefTrump viceTrump (Chief firstPlayer) =
   evalStateT roundState firstPlayer
   where
     roundState = fold <$> replicateM numberOfRounds trickState
-    trickState = StateT $ playTrick l getCard trumps
+    trickState = StateT $ playTrick l getCard chiefTrump viceTrump
 
 playTrick ::
      ( Traversable1 players
@@ -83,11 +86,12 @@ playTrick ::
      )
   => (player -> ASetter' (players [Card]) [Card])
   -> (player -> m Card)
-  -> Trumps
+  -> ChiefTrump
+  -> Maybe ViceTrump
   -> player
   -> m (players [Card], player)
-playTrick l getCard trumps firstPlayer =
-  cardsAndWinner l trumps <$> traverse (withInput getCard) players
+playTrick l getCard chiefTrump viceTrump firstPlayer =
+  cardsAndWinner l chiefTrump viceTrump <$> traverse (withInput getCard) players
   where
     players = playersStartingFrom firstPlayer
 
@@ -98,17 +102,18 @@ playersStartingFrom = evalState $ traverseEmpty players
 cardsAndWinner ::
      (Functor t, Foldable1 t, Monoid (t [Card]))
   => (player -> ASetter' (t [Card]) [Card])
-  -> Trumps
+  -> ChiefTrump
+  -> Maybe ViceTrump
   -> t (player, Card)
   -> (t [Card], player)
-cardsAndWinner l trumps playerCards = (wonCards, winner)
+cardsAndWinner l chiefTrump viceTrump playerCards = (wonCards, winner)
   where
     wonCards = set (l winner) (toList cards) mempty
     cards = fmap snd $ playerCards
     ledSuit = LedSuit . suit $ head1 cards
     winner = winningPlayer $ foldMap1 trickWinner playerCards
     trickWinner (player, card) =
-      TrickWinner player (trickCard trumps ledSuit card)
+      TrickWinner player (trickCard chiefTrump viceTrump ledSuit card)
 
 head1 :: Foldable1 f => f a -> a
 head1 = getFirst . foldMap1 First
@@ -116,30 +121,19 @@ head1 = getFirst . foldMap1 First
 newtype LedSuit =
   LedSuit Suit
 
-trickCard :: Trumps -> LedSuit -> Card -> TrickCard
-trickCard trumps (LedSuit ledSuit) card =
-  if isHighestTrump && isLowerTrump
-    then TrumpCard DoublyTrump
-    else if isHighestTrump
-           then TrumpCard (HighestTrump rank')
-           else if isLowerTrump
-                  then TrumpCard (LowerTrump rank')
-                  else if isOfLedSuit
-                         then CardOfLedSuit rank'
-                         else OtherCard
+trickCard :: ChiefTrump -> Maybe ViceTrump -> LedSuit -> Card -> TrickCard
+trickCard (ChiefTrump chiefTrump) viceTrump (LedSuit ledSuit) card
+  | isHighestTrump && isLowerTrump = TrumpCard DoublyTrump
+  | isHighestTrump = TrumpCard (HighestTrump rank')
+  | isLowerTrump = TrumpCard (LowerTrump rank')
+  | isOfLedSuit = CardOfLedSuit rank'
+  | otherwise = OtherCard
   where
-    isHighestTrump = isTrump (highestTrump trumps) card
-    isLowerTrump = any (flip isTrump card) (lowerTrump trumps)
+    isHighestTrump = isTrump chiefTrump card
+    isLowerTrump = any (\(ViceTrump trump) -> isTrump trump card) viceTrump 
     isOfLedSuit = suit card == ledSuit
     rank' = Rank (rank card)
 
-highestTrump :: Trumps -> Trump
-highestTrump (SingleTrump trump)    = trump
-highestTrump (HigherLower higher _) = higher
-
-lowerTrump :: Trumps -> Maybe Trump
-lowerTrump (SingleTrump _)       = Nothing
-lowerTrump (HigherLower _ lower) = Just lower
 
 isTrump :: Trump -> Card -> Bool
 isTrump (SuitTrump trumpSuit) (Card cardSuit _) = trumpSuit == cardSuit

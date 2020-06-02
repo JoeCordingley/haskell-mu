@@ -24,12 +24,12 @@ data BiddingResult player
   | UnsuccessfulBiddingResult (Stalemate player)
 
 data WinnersAndTopBid player =
-  WinnersAndTopBid (Winners player) Int
+  WinnersAndTopBid (Chief player) (Maybe (Vice player)) TopBid
 
 data Stalemate player
   = EklatNoPoints
   | Eklat
-      { topBid   :: Int
+      { topBid   :: TopBid
       , atFault  :: player
       , affected :: NonEmpty player
       }
@@ -39,10 +39,15 @@ data FinishedBidding players player
   = Successful (SuccessfulBidding players player)
   | Unsuccessful (Stalemate player)
 
+newtype TopBid = TopBid Int deriving (Show, Eq, Ord)
+
+newtype Vice player = Vice player
+
 data SuccessfulBidding players player =
   SuccessfulBidding
-    { biddingWinners   :: Winners player
-    , successfulTopBid :: Int
+    { chief   :: Chief player
+    , vice :: Maybe (Vice player)
+    , successfulTopBid :: TopBid
     , biddingPositions :: players CardPositions
     }
 
@@ -55,15 +60,15 @@ data CardPositions =
 finishBidding ::
      (BiddingResult player, players CardPositions)
   -> FinishedBidding players player
-finishBidding (SuccessfulBiddingResult (WinnersAndTopBid winners topBid), cardPositions) =
-  Successful (SuccessfulBidding winners topBid cardPositions)
+finishBidding (SuccessfulBiddingResult (WinnersAndTopBid chief vice topBid), cardPositions) =
+  Successful (SuccessfulBidding chief vice topBid cardPositions)
 
 finishBidding2 ::
      Functor players
   => (BiddingResult player, players (player, CardPositions))
   -> FinishedBidding players player
-finishBidding2 (SuccessfulBiddingResult (WinnersAndTopBid winners topBid), cardPositions) =
-  Successful (SuccessfulBidding winners topBid (snd <$> cardPositions))
+finishBidding2 (SuccessfulBiddingResult (WinnersAndTopBid chief vice topBid), cardPositions) =
+  Successful (SuccessfulBidding chief vice topBid (snd <$> cardPositions))
 
 initialPositions :: [Card] -> CardPositions
 initialPositions cards = CardPositions {inHand = cards, onTable = []}
@@ -94,27 +99,27 @@ tallyAuction ::
   => players (player, [Card])
   -> BiddingResult player
 tallyAuction playerCards =
-  if topBid == 0
+  if topBid == TopBid(0)
     then UnsuccessfulBiddingResult (EklatNoPoints)
     else case NE.reverse maxBidders' of
-           chief :| [] -> SuccessfulBiddingResult (successful chief topBid)
+           chief :| [] -> SuccessfulBiddingResult (successful (Chief chief) topBid)
            lastPlayerToRaise :| penultimate:others ->
              UnsuccessfulBiddingResult
                (Eklat topBid lastPlayerToRaise (penultimate :| others))
   where
     MaxBidders (Semi.Max topBid) maxBidders' = foldMap1 playerBids playerCards
-    successful = WinnersAndTopBid . winners
-    winners chief =
+    successful chief = WinnersAndTopBid chief (vice chief)
+    vice chief =
       case vices chief of
-        [vice] -> ChiefAndVice (Chief chief) vice
-        _      -> ChiefOnly (Chief chief)
-    vices chief =
+        [vice] -> (Just (Vice vice))
+        _      ->  Nothing
+    vices (Chief chief) =
       maxBidders . foldMap viceBids . NE.filter (notPlayer chief) $
       toNonEmpty playerCards
     notPlayer player = (/= player) . fst
     viceBids (player, cards) = MaxBidders (ViceBid cards) [player]
     playerBids (player, cards) =
-      MaxBidders (Semi.Max (length cards)) (player :| [])
+      MaxBidders (Semi.Max (TopBid (length cards))) (player :| [])
 
 playAuction ::
      ( Foldable1 players

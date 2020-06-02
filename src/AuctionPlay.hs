@@ -1,13 +1,13 @@
 module AuctionPlay
   ( Interactions(..)
-  , bidding
-  , bidding2
-  , Trumps(..)
+  --, Trumps(..)
   , Trump(..)
-  , TrumpsAndTeams(..)
-  , TrumpsAndChiefsTeam(..)
-  , Teams(..)
-  , FinishedAuction(..)
+--  , TrumpsAndTeams(..)
+  , TrumpsAndPartner(..)
+--  , ChiefsTeam(..)
+--  , FinishedAuction(..)
+  , ViceTrump(..)
+  , Partner(..)
   ) where
 
 import           AuctionFunctions
@@ -18,25 +18,27 @@ import qualified Data.Map.Lazy            as Map
 import           Data.Maybe
 import           Util
 
-data TrumpsAndChiefsTeam player =
-  TrumpsAndChiefsTeam
-    { trumps     :: Trumps
-    , chiefsTeam :: Teams player
+newtype ViceTrump = ViceTrump Trump
+
+data TrumpsAndPartner player =
+  TrumpsAndPartner
+    { chiefTrump     :: ChiefTrump
+    , viceTrump :: Maybe ViceTrump
+    , partner :: Maybe (Partner player)
     }
 
-data TrumpsAndTeams player =
-  TrumpsAndTeams Trumps (Teams player) TopBid (CardPositions player)
-  deriving (Show)
+newtype Partner player = Partner player 
 
-data Teams player
-  = ChiefAlone player
-  | ChiefAndPartner player player
-  deriving (Show)
+--data TrumpsAndTeams player =
+--  TrumpsAndTeams Trumps (ChiefsTeam player) TopBid (CardPositions player)
+--  deriving (Show)
 
-data FinishedAuction player
-  = SuccessfulAuction (TrumpsAndTeams player)
-  | UnsuccessfulAuction (Stalemate player)
-  deriving (Show)
+--data ChiefsTeam player = ChiefsTeam { chief :: Chief player, partner :: Maybe player } deriving (Show)
+
+--data FinishedAuction player
+--  = SuccessfulAuction (TrumpsAndTeams player)
+--  | UnsuccessfulAuction (Stalemate player)
+--  deriving (Show)
 
 data Interactions f player =
   Interactions
@@ -47,81 +49,81 @@ data Interactions f player =
 
 type NumberOfPlayers = Int
 
-bidding2 ::
-     (Ord player, Monad f)
-  => (Int -> player -> [Card] -> f Bid)
-  -> [(player, [Card])]
-  -> f (FinishedBidding player)
-bidding2 getBid playerHands =
-  evalStateT (bidding2' numberOfPlayers getBid playerSequence) $
-  initialState playerHands
-  where
-    players = map fst playerHands
-    playerSequence = cycle players
-    numberOfPlayers = length players
+--bidding2 ::
+--     (Ord player, Monad f)
+--  => (Int -> player -> [Card] -> f Bid)
+--  -> [(player, [Card])]
+--  -> f (FinishedBidding player)
+--bidding2 getBid playerHands =
+--  evalStateT (bidding2' numberOfPlayers getBid playerSequence) $
+--  initialState playerHands
+--  where
+--    players = map fst playerHands
+--    playerSequence = cycle players
+--    numberOfPlayers = length players
+--
+--bidding ::
+--     (Ord player, Monad f)
+--  => (Int -> player -> [Card] -> f Bid)
+--  -> [player]
+--  -> StateT (AuctionState player) f (AuctionResult player)
+--bidding getBid players = bidding' numberOfPlayers getBid playerSequence
+--  where
+--    playerSequence = cycle players
+--    numberOfPlayers = length players
 
-bidding ::
-     (Ord player, Monad f)
-  => (Int -> player -> [Card] -> f Bid)
-  -> [player]
-  -> StateT (AuctionState player) f (AuctionResult player)
-bidding getBid players = bidding' numberOfPlayers getBid playerSequence
-  where
-    playerSequence = cycle players
-    numberOfPlayers = length players
+--bidding2' ::
+--     (Ord player, Monad f)
+--  => NumberOfPlayers
+--  -> (Int -> player -> [Card] -> f Bid)
+--  -> [player]
+--  -> StateT (AuctionState player) f (FinishedBidding player)
+--bidding2' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
+--  state <- get
+--  let maxBid =
+--        maximum
+--          (0 : (map length . Map.elems . cardsOnTable $ auctionPositions state))
+--      cards = findOrEmptyList thisPlayer . cardsInHand $ auctionPositions state
+--      numberOfPasses = passes state
+--      currentTotal =
+--        length . findOrEmptyList thisPlayer . cardsOnTable $
+--        auctionPositions state
+--      maxBidAllowed = maxBid + 1 - currentTotal
+--  if numberOfPasses == numberOfPlayers
+--    then return $
+--         finishBidding
+--           numberOfPlayers
+--           (auctionPositions state)
+--           (lastToRaise state)
+--    else do
+--      bid <- lift $ getBid maxBidAllowed thisPlayer cards
+--      modify $ auctionState thisPlayer bid
+--      bidding2' numberOfPlayers getBid nextPlayers
 
-bidding2' ::
-     (Ord player, Monad f)
-  => NumberOfPlayers
-  -> (Int -> player -> [Card] -> f Bid)
-  -> [player]
-  -> StateT (AuctionState player) f (FinishedBidding player)
-bidding2' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
-  state <- get
-  let maxBid =
-        maximum
-          (0 : (map length . Map.elems . cardsOnTable $ auctionPositions state))
-      cards = findOrEmptyList thisPlayer . cardsInHand $ auctionPositions state
-      numberOfPasses = passes state
-      currentTotal =
-        length . findOrEmptyList thisPlayer . cardsOnTable $
-        auctionPositions state
-      maxBidAllowed = maxBid + 1 - currentTotal
-  if numberOfPasses == numberOfPlayers
-    then return $
-         finishBidding
-           numberOfPlayers
-           (auctionPositions state)
-           (lastToRaise state)
-    else do
-      bid <- lift $ getBid maxBidAllowed thisPlayer cards
-      modify $ auctionState thisPlayer bid
-      bidding2' numberOfPlayers getBid nextPlayers
-
-bidding' ::
-     (Ord player, Monad f)
-  => NumberOfPlayers
-  -> (Int -> player -> [Card] -> f Bid)
-  -> [player]
-  -> StateT (AuctionState player) f (AuctionResult player)
-bidding' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
-  state <- get
-  case auctionStatus numberOfPlayers state of
-    Finished result -> return result
-    Unfinished -> do
-      bid <- lift $ getBid maxBidAllowed thisPlayer cards
-      modify $ auctionState thisPlayer bid
-      bidding' numberOfPlayers getBid nextPlayers
-      where cards =
-              findOrEmptyList thisPlayer . cardsInHand $ auctionPositions state
-            maxBid =
-              maximum
-                (0 :
-                 (map length . Map.elems . cardsOnTable $ auctionPositions state))
-            currentTotal =
-              length . findOrEmptyList thisPlayer . cardsOnTable $
-              auctionPositions state
-            maxBidAllowed = maxBid + 1 - currentTotal
+--bidding' ::
+--     (Ord player, Monad f)
+--  => NumberOfPlayers
+--  -> (Int -> player -> [Card] -> f Bid)
+--  -> [player]
+--  -> StateT (AuctionState player) f (AuctionResult player)
+--bidding' numberOfPlayers getBid (thisPlayer:nextPlayers) = do
+--  state <- get
+--  case auctionStatus numberOfPlayers state of
+--    Finished result -> return result
+--    Unfinished -> do
+--      bid <- lift $ getBid maxBidAllowed thisPlayer cards
+--      modify $ auctionState thisPlayer bid
+--      bidding' numberOfPlayers getBid nextPlayers
+--      where cards =
+--              findOrEmptyList thisPlayer . cardsInHand $ auctionPositions state
+--            maxBid =
+--              maximum
+--                (0 :
+--                 (map length . Map.elems . cardsOnTable $ auctionPositions state))
+--            currentTotal =
+--              length . findOrEmptyList thisPlayer . cardsOnTable $
+--              auctionPositions state
+--            maxBidAllowed = maxBid + 1 - currentTotal
 --getTrumps ::
 --     (Ord player, Monad f)
 --  => (player -> [Trump] -> f Trump)
