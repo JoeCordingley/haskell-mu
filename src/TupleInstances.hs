@@ -1,4 +1,4 @@
-module New.TupleInstances where
+module TupleInstances where
 
 import           Data.Functor.Apply
 import           Data.List.NonEmpty         (NonEmpty (..))

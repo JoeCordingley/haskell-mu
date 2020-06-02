@@ -1,7 +1,6 @@
-module New.Bidding where
+{-# LANGUAGE NamedFieldPuns             #-}
+module Mu.Auction where
 
-import           AuctionFunctions          (Bid (..), Chief (..), Winners (..),
-                                            viceOrdering)
 import           Cards
 import           Control.Lens              hiding ((<.>))
 import           Control.Monad.State.Class
@@ -15,13 +14,42 @@ import           Data.Monoid
 import qualified Data.Semigroup            as Semi
 import           Data.Semigroup.Foldable
 import           Data.Tuple.Homogenous
-import           New.Players
-import           New.TupleInstances
-import           New.Util
+import           Mu.Players
+import           TupleInstances
+import           Util
+
+data Bid
+  = Pass
+  | Raise [Card]
+  deriving (Show, Eq)
+
+newtype Chief player =
+  Chief { getChief :: player }
+  deriving (Eq, Show)
 
 data BiddingResult player
   = SuccessfulBiddingResult (WinnersAndTopBid player)
   | UnsuccessfulBiddingResult (Stalemate player)
+
+viceOrdering :: [Card] -> [Card] -> Ordering
+viceOrdering = compareBy viceComparisons
+
+compareBy :: Traversable t => t (a -> b -> Ordering) -> a -> b -> Ordering
+compareBy fs a b =
+  case find (/= EQ) $ fmap (\c -> c a b) fs of
+    Just unequal -> unequal
+    Nothing      -> EQ
+
+viceComparisons :: [[Card] -> [Card] -> Ordering]
+viceComparisons = compareLength : map compareNs [9,8 .. 1]
+
+compareNs :: Rank -> [Card] -> [Card] -> Ordering
+compareNs n as bs = compare (numberOfNs as) (numberOfNs bs)
+  where
+    numberOfNs = length . filter (== n) . map rank
+
+compareLength :: [a] -> [b] -> Ordering
+compareLength as bs = compare (length as) (length bs)
 
 data WinnersAndTopBid player =
   WinnersAndTopBid (Chief player) (Maybe (Vice player)) TopBid
@@ -41,7 +69,7 @@ data FinishedBidding players player
 
 newtype TopBid = TopBid Int deriving (Show, Eq, Ord)
 
-newtype Vice player = Vice player
+newtype Vice player = Vice { getVice :: player }
 
 data SuccessfulBidding players player =
   SuccessfulBidding
@@ -57,18 +85,13 @@ data CardPositions =
     , onTable :: [Card]
     }
 
+
 finishBidding ::
      (BiddingResult player, players CardPositions)
   -> FinishedBidding players player
 finishBidding (SuccessfulBiddingResult (WinnersAndTopBid chief vice topBid), cardPositions) =
   Successful (SuccessfulBidding chief vice topBid cardPositions)
 
-finishBidding2 ::
-     Functor players
-  => (BiddingResult player, players (player, CardPositions))
-  -> FinishedBidding players player
-finishBidding2 (SuccessfulBiddingResult (WinnersAndTopBid chief vice topBid), cardPositions) =
-  Successful (SuccessfulBidding chief vice topBid (snd <$> cardPositions))
 
 initialPositions :: [Card] -> CardPositions
 initialPositions cards = CardPositions {inHand = cards, onTable = []}
@@ -149,15 +172,16 @@ playAuctionAndRecord ::
      , Monoid (players1 [Card])
      , Cycling player
      , Applicative players1
+     , Functor players2
      )
   => (player -> StateT (players2 CardPositions) f Bid)
   -> (player -> [Card] -> players1 [Card])
   -> players1 player
   -> player
-  -> players2 CardPositions
+  -> players2 [Card]
   -> f (FinishedBidding players2 player)
-playAuctionAndRecord getBid raise players firstPlayer =
-  fmap finishBidding . runStateT (playAuction getBid raise players firstPlayer)
+playAuctionAndRecord getBid raise players firstPlayer cards =
+  fmap finishBidding . runStateT (playAuction getBid raise players firstPlayer) $ fmap initialPositions cards
 
 bid :: [Card] -> Bid
 bid []    = Pass
@@ -207,3 +231,32 @@ class Ord a =>
 
 instance (Monoid players, Zeroed bid) => Monoid (MaxBidders players bid) where
   mempty = MaxBidders zero mempty
+
+newtype IsMoreThanThreePlayers = IsMoreThanThreePlayers Bool
+
+newtype ViceTrump = ViceTrump Trump
+newtype Partner player = Partner player 
+
+data TrumpsAndPartner player =
+  TrumpsAndPartner
+    { chiefTrump     :: ChiefTrump
+    , viceTrump :: Maybe ViceTrump
+    , partner :: Maybe (Partner player)
+    }
+
+settleAuctionRound
+  :: Monad m =>
+     IsMoreThanThreePlayers
+     -> (vice -> cards -> m ViceTrump)
+     -> (chief -> cards -> m ChiefTrump)
+     -> (chief -> players -> m (Partner player))
+     -> players
+     -> (chief, cards)
+     -> Maybe (vice, cards)
+     -> m (TrumpsAndPartner player)
+settleAuctionRound (IsMoreThanThreePlayers isMoreThanThreePlayers) getViceTrump getChiefTrump getPartner players (chief, chiefCards) viceAndCards = do 
+  viceTrump <- traverse (uncurry getViceTrump ) viceAndCards
+  chiefTrump <- getChiefTrump chief chiefCards
+  partner <- if isMoreThanThreePlayers then fmap Just  (getPartner chief players) else return Nothing
+  return TrumpsAndPartner {chiefTrump, viceTrump, partner} where
+

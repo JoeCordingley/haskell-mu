@@ -1,19 +1,16 @@
 {-# LANGUAGE RankNTypes    #-}
 {-# LANGUAGE TupleSections #-}
 
-module New.BiddingPlayerNumbers where
+module Mu.BiddingPlayerNumbers where
 
-import           AuctionFunctions         (Bid (..))
 import           Cards                    (Card)
 import           Control.Lens
 import           Control.Monad.State.Lazy (StateT (..))
 import           Data.Semigroup.Foldable
 import           Data.Tuple.Homogenous
-import           New.Bidding              (CardPositions (..),
-                                           playAuctionAndRecord)
-import           New.Bidding              (FinishedBidding)
-import           New.Players
-import           New.TupleInstances
+import           Mu.Auction              (CardPositions (..), playAuctionAndRecord , FinishedBidding, Bid(..))
+import           Mu.Players
+import           TupleInstances
 import           Util                     (minus)
 
 type FirstPlayer a = a
@@ -31,15 +28,15 @@ biddingNPlayers ::
   -> (forall c. player -> Lens' (players c) c)
   -> (player -> [Card] -> m Bid)
   -> player
-  -> players CardPositions
+  -> players [Card]
   -> m (FinishedBidding players player)
-biddingNPlayers tupleN nLens getBid firstPlayer cardPositions =
+biddingNPlayers tupleN nLens getBid firstPlayer cards =
   playAuctionAndRecord
     getBidStateful'
     raiseThree
     tupleN
     firstPlayer
-    cardPositions
+    cards
   where
     raiseThree n cards = set (nLens n) cards $ mempty
     getBidStateful' n = StateT $ getBidStateful'''
@@ -54,7 +51,7 @@ biddingThreePlayers ::
      Monad f
   => (NOfThree -> [Card] -> f Bid)
   -> FirstPlayer NOfThree
-  -> Tuple3 CardPositions
+  -> Tuple3 [Card]
   -> f (FinishedBidding Tuple3 NOfThree)
 biddingThreePlayers =
   biddingNPlayers (Tuple3 (OneOfThree, TwoOfThree, ThreeOfThree)) threeLens
@@ -63,7 +60,7 @@ biddingFourPlayers ::
      Monad f
   => (NOfFour -> [Card] -> f Bid)
   -> FirstPlayer NOfFour
-  -> Tuple4 CardPositions
+  -> Tuple4 [Card]
   -> f (FinishedBidding Tuple4 NOfFour)
 biddingFourPlayers =
   biddingNPlayers
@@ -74,7 +71,7 @@ biddingFivePlayers ::
      Monad f
   => (NOfFive -> [Card] -> f Bid)
   -> FirstPlayer NOfFive
-  -> Tuple5 CardPositions
+  -> Tuple5 [Card]
   -> f (FinishedBidding Tuple5 NOfFive)
 biddingFivePlayers =
   biddingNPlayers
@@ -85,7 +82,7 @@ biddingSixPlayers ::
      Monad f
   => (NOfSix -> [Card] -> f Bid)
   -> FirstPlayer NOfSix
-  -> Tuple6 CardPositions
+  -> Tuple6 [Card]
   -> f (FinishedBidding Tuple6 NOfSix)
 biddingSixPlayers =
   biddingNPlayers

@@ -1,13 +1,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module New.Deal where
+module Mu.Deal where
 
 import           Cards
 import           Control.Monad.Random.Class
 import           Control.Monad.State.Lazy
 import           Data.List.Split
 import           Data.Tuple.Homogenous
-import           New.TupleInstances
+import           TupleInstances
 import           System.Random.Shuffle
 
 deal3 :: (MonadRandom m) => m (Tuple3 [Card])

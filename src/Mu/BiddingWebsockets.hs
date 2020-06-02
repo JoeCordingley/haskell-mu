@@ -3,9 +3,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module New.BiddingWebsockets where
+module Mu.BiddingWebsockets where
 
-import           AuctionFunctions         (Bid (..))
 import           Control.Monad.IO.Class   (MonadIO)
 import           Protolude
 
@@ -22,12 +21,11 @@ import           Data.Text                (pack)
 import           Data.Tuple.Homogenous
 import           Data.Validation
 import           Network.WebSockets       (Connection)
-import           New.Bidding              (CardPositions)
-import           New.Bidding              (FinishedBidding)
-import           New.BiddingPlayerNumbers
-import           New.Players
+import           Mu.BiddingPlayerNumbers
+import           Mu.Players
 import           Servant.Server           (ServerError (..), err400)
 import           Websockets.Websockets    (receiveJSONOrServerError, sendJSON)
+import           Mu.Auction              (FinishedBidding, Bid(..), CardPositions)
 
 data BidRequest =
   BidRequest [IndexedValue Card]
@@ -119,7 +117,7 @@ biddingWS ::
   -> players player
   -> (forall c. player -> Lens' (players c) c)
   -> player
-  -> players CardPositions
+  -> players [Card]
   -> m (FinishedBidding players player)
 biddingWS cs players l = biddingNPlayers players l (getBidWS cs l)
 
@@ -127,7 +125,7 @@ biddingThreeWS ::
      (MonadIO m, MonadError ServerError m)
   => Tuple3 Connection
   -> NOfThree
-  -> Tuple3 CardPositions
+  -> Tuple3 [Card]
   -> m (FinishedBidding Tuple3 NOfThree)
 biddingThreeWS cs = biddingWS cs threePlayers threeLens
 
@@ -135,7 +133,7 @@ biddingFourWS ::
      (MonadIO m, MonadError ServerError m)
   => Tuple4 Connection
   -> NOfFour
-  -> Tuple4 CardPositions
+  -> Tuple4 [Card]
   -> m (FinishedBidding Tuple4 NOfFour)
 biddingFourWS cs = biddingWS cs fourPlayers fourLens
 
@@ -143,7 +141,7 @@ biddingFiveWS ::
      (MonadIO m, MonadError ServerError m)
   => Tuple5 Connection
   -> NOfFive
-  -> Tuple5 CardPositions
+  -> Tuple5 [Card]
   -> m (FinishedBidding Tuple5 NOfFive)
 biddingFiveWS cs = biddingWS cs fivePlayers fiveLens
 
@@ -151,7 +149,7 @@ biddingSixWS ::
      (MonadIO m, MonadError ServerError m)
   => Tuple6 Connection
   -> NOfSix
-  -> Tuple6 CardPositions
+  -> Tuple6 [Card]
   -> m (FinishedBidding Tuple6 NOfSix)
 biddingSixWS cs = biddingWS cs sixPlayers sixLens
 

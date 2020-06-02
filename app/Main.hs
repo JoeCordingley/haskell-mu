@@ -1,13 +1,10 @@
 module Main where
 
-import           AuctionCLI
-import           AuctionPlay
-import           Deal
-import           Lib
+import           Mu.Deal
 import qualified Websockets.Websockets as WS
 
 main :: IO ()
-main = WS.main
+main = undefined
 --fivePlayerAuction :: IO ()
 --fivePlayerAuction = do
 --  startingHands <- newFivePlayerInitialHands

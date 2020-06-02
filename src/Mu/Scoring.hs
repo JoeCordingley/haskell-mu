@@ -1,17 +1,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 
-module New.Scoring where
+module Mu.Scoring where
 
-import           AuctionPlay        (TrumpsAndPartner (..))
 import           Cards              (Card, Score (..), Trump (..), points, rank, ChiefTrump(..))
 import           Control.Lens       hiding ((<|))
 import           Data.Foldable      (find)
 import           Data.List.NonEmpty ((<|))
 import           Data.Monoid        (Endo (..))
 import           Data.Semigroup     (Sum (..))
-import           New.Bidding        (Stalemate (..), TopBid(..))
-import AuctionFunctions (Chief(..))
+import           Mu.Auction        (Stalemate (..), TopBid(..), Chief(..), TrumpsAndPartner(..))
 
 newtype NumberOfPlayers =
   NumberOfPlayers Int

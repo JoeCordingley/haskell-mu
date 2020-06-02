@@ -1,13 +1,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
 
-module New.PlayerStateTry where
+module Mu.PlayerStateTry where
 
 import           Control.Lens
 import           Control.Monad.Reader
 import           Control.Monad.State.Lazy
 import           Data.Bifunctor           (first)
-import           New.Players
+import           Mu.Players
 
 getPlayerState ::
      (MonadState (player, players) m) => (player -> Getting s players s) -> m s

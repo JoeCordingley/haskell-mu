@@ -1,9 +1,8 @@
 {-# LANGUAGE RankNTypes    #-}
 {-# LANGUAGE TupleSections #-}
 
-module New.CardPlay where
+module Mu.CardPlay where
 
-import           AuctionFunctions           (Chief (..))
 import           Cards                      (Card (..), Suit, Trump (..), ChiefTrump(..))
 import           Control.Lens
 import           Control.Monad              (replicateM)
@@ -15,10 +14,9 @@ import           Data.Functor.Apply
 import           Data.Semigroup
 import           Data.Semigroup.Foldable
 import           Data.Semigroup.Traversable
-import           New.Bidding                (CardPositions (..))
-import           New.Players
+import           Mu.Auction                (CardPositions (..), Chief(..), ViceTrump(..))
+import           Mu.Players
 import           Util                       (remove)
-import AuctionPlay (ViceTrump(..))
 
 newtype NumberOfRounds =
   NumberOfRounds Int

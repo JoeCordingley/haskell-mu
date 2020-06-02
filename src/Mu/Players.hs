@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 
-module New.Players where
+module Mu.Players where
 
 import           Control.Lens
 import           Control.Monad.State.Lazy
