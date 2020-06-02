@@ -21,8 +21,7 @@ import           Data.Text               (pack)
 import           Data.Tuple.Homogenous
 import           Data.Validation
 import           Mu.Auction              (Bid (..), CardPositions,
-                                          FinishedBidding)
-import           Mu.BiddingPlayerNumbers
+                                          FinishedBidding, playAuctionAndRecord)
 import           Mu.Players
 import           Network.WebSockets      (Connection)
 import           Servant.Server          (ServerError (..), err400)
@@ -120,7 +119,7 @@ biddingWS ::
   -> player
   -> players [Card]
   -> m (FinishedBidding players player)
-biddingWS cs players l = biddingNPlayers players l (getBidWS cs l)
+biddingWS cs players l = playAuctionAndRecord players l (getBidWS cs l)
 
 biddingThreeWS ::
      (MonadIO m, MonadError ServerError m)

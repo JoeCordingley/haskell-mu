@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes     #-}
 
 module Mu.Auction where
 
@@ -8,6 +9,7 @@ import           Control.Monad.State.Class
 import           Control.Monad.State.Lazy
 import           Data.Foldable             (toList)
 import           Data.Functor.Apply
+import           Data.Functor.Compose
 import           Data.List                 hiding (sortOn)
 import           Data.List.NonEmpty        (NonEmpty (..))
 import qualified Data.List.NonEmpty        as NE
@@ -172,24 +174,34 @@ playAuction getBid raise players firstPlayer =
     n = length players
 
 playAuctionAndRecord ::
-     ( Foldable1 players1
-     , Traversable players1
+     ( Foldable1 players
+     , Traversable players
      , Eq player
      , Monad f
-     , Monoid (players1 [Card])
+     , Monoid (players [Card])
      , Cycling player
-     , Applicative players1
-     , Functor players2
+     , Applicative players
+     , Functor players
      )
-  => (player -> StateT (players2 CardPositions) f Bid)
-  -> (player -> [Card] -> players1 [Card])
-  -> players1 player
+  => players player
+  -> (forall c. player -> Lens' (players c) c)
+  -> (player -> [Card] -> f Bid)
   -> player
-  -> players2 [Card]
-  -> f (FinishedBidding players2 player)
-playAuctionAndRecord getBid raise players firstPlayer cards =
-  fmap finishBidding . runStateT (playAuction getBid raise players firstPlayer) $
-  fmap initialPositions cards
+  -> players [Card]
+  -> f (FinishedBidding players player)
+playAuctionAndRecord players l getBid firstPlayer =
+  fmap finishBidding .
+  runStateT (playAuction (StateT . getBid') raise players firstPlayer) .
+  fmap initialPositions
+  where
+    getBid' player = getCompose . (l player) (Compose . getBidAndUpdate player)
+    getBidAndUpdate player cardPositions =
+      update cardPositions <$> getBid player (inHand cardPositions)
+    update CardPositions {inHand, onTable} (Raise cards) =
+      ( Raise cards
+      , CardPositions {inHand = minus cards inHand, onTable = cards <> onTable})
+    update cardPositions Pass = (Pass, cardPositions)
+    raise player cards = set (l player) cards mempty
 
 bid :: [Card] -> Bid
 bid []    = Pass
@@ -274,4 +286,3 @@ settleAuctionRound (IsMoreThanThreePlayers isMoreThanThreePlayers) getViceTrump 
       then fmap Just (getPartner chief players)
       else return Nothing
   return TrumpsAndPartner {chiefTrump, viceTrump, partner}
-  where
