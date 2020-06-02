@@ -3,13 +3,15 @@
 
 module Mu.Scoring where
 
-import           Cards              (Card, Score (..), Trump (..), points, rank, ChiefTrump(..))
+import           Cards              (Card, ChiefTrump (..), Score (..),
+                                     Trump (..), points, rank)
 import           Control.Lens       hiding ((<|))
 import           Data.Foldable      (find)
 import           Data.List.NonEmpty ((<|))
 import           Data.Monoid        (Endo (..))
 import           Data.Semigroup     (Sum (..))
-import           Mu.Auction        (Stalemate (..), TopBid(..), Chief(..), TrumpsAndPartner(..))
+import           Mu.Auction         (Chief (..), Stalemate (..), TopBid (..),
+                                     TrumpsAndPartner (..))
 
 newtype NumberOfPlayers =
   NumberOfPlayers Int
@@ -24,24 +26,24 @@ scoreStalemate ::
   -> Stalemate player
   -> scores
 scoreStalemate _ EklatNoPoints = mempty
-scoreStalemate l Eklat {topBid = TopBid topBid, atFault, affected} = setScores mempty
+scoreStalemate l Eklat {topBid = TopBid topBid, atFault, affected} =
+  setScores mempty
   where
     setScores = appEndo $ foldMap Endo setters
     setAtFault = set (l atFault) (-10 * topBid)
     setAffected = fmap (\p -> set (l p) (5 * topBid)) affected
     setters = setAtFault <| setAffected
 
-
-scoreCardPlay
-  :: (Semigroup (f Score), Foldable t, Eq player, Functor f, Foldable f) =>
-     (player -> Getting Score (f Score) Score)
-     -> f player
-     -> Chief player
-     -> ChiefTrump 
-     -> Maybe player
-     -> CardsBid
-     -> f (t Card)
-     -> f Score
+scoreCardPlay ::
+     (Semigroup (f Score), Foldable t, Eq player, Functor f, Foldable f)
+  => (player -> Getting Score (f Score) Score)
+  -> f player
+  -> Chief player
+  -> ChiefTrump
+  -> Maybe player
+  -> CardsBid
+  -> f (t Card)
+  -> f Score
 scoreCardPlay l players (Chief chief) (ChiefTrump chiefTrump) partner cardsBid cardsWon =
   (cardPoints <> bonusPoints)
   where
@@ -77,8 +79,8 @@ data GoalResult
   | RankMissedBy CardsBid
 
 goalResult :: NumberOfPlayers -> CardsBid -> Score -> GoalResult
-goalResult numberOfPlayers cardsBid score = 
-  if rankAchieved >= cardsBid 
+goalResult numberOfPlayers cardsBid score =
+  if rankAchieved >= cardsBid
     then RankAchieved
     else RankMissedBy (cardsBid - rankAchieved)
   where

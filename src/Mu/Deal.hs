@@ -7,8 +7,8 @@ import           Control.Monad.Random.Class
 import           Control.Monad.State.Lazy
 import           Data.List.Split
 import           Data.Tuple.Homogenous
-import           TupleInstances
 import           System.Random.Shuffle
+import           TupleInstances
 
 deal3 :: (MonadRandom m) => m (Tuple3 [Card])
 deal3 = shuffleAndDeal reducedDeck

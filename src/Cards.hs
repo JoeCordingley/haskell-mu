@@ -32,6 +32,7 @@ newtype Score =
 
 instance Semigroup Score where
   Score l <> Score r = Score (l + r)
+
 instance Monoid Score where
   mempty = Score 0
 
@@ -63,15 +64,13 @@ reducedDeck = deck reducedSuits
 
 fullDeck = deck allSuits
 
-newtype ChiefTrump = ChiefTrump Trump
+newtype ChiefTrump =
+  ChiefTrump Trump
 
 --data Trumps = Trumps { chiefTrump :: Trump, viceTrump :: Maybe Trump }
 --  deriving (Show)
-
-
 data Trump
   = SuitTrump Suit
   | RankTrump Int
   | NoTrump
   deriving (Eq, Show)
-

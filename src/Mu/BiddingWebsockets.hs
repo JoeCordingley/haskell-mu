@@ -5,27 +5,28 @@
 
 module Mu.BiddingWebsockets where
 
-import           Control.Monad.IO.Class   (MonadIO)
+import           Control.Monad.IO.Class  (MonadIO)
 import           Protolude
 
-import           Cards                    (Card (..), Suit (..))
-import           Control.Lens             hiding ((.=))
-import           Control.Monad.Except     (MonadError, liftEither)
-import           Control.Monad.Fail       (fail)
+import           Cards                   (Card (..), Suit (..))
+import           Control.Lens            hiding ((.=))
+import           Control.Monad.Except    (MonadError, liftEither)
+import           Control.Monad.Fail      (fail)
 import           Data.Aeson
-import qualified Data.Aeson               as JSON
-import qualified Data.List.Index          as List
-import qualified Data.Map.Lazy            as Map
+import qualified Data.Aeson              as JSON
+import qualified Data.List.Index         as List
+import qualified Data.Map.Lazy           as Map
 import           Data.Semigroup.Foldable
-import           Data.Text                (pack)
+import           Data.Text               (pack)
 import           Data.Tuple.Homogenous
 import           Data.Validation
-import           Network.WebSockets       (Connection)
+import           Mu.Auction              (Bid (..), CardPositions,
+                                          FinishedBidding)
 import           Mu.BiddingPlayerNumbers
 import           Mu.Players
-import           Servant.Server           (ServerError (..), err400)
-import           Websockets.Websockets    (receiveJSONOrServerError, sendJSON)
-import           Mu.Auction              (FinishedBidding, Bid(..), CardPositions)
+import           Network.WebSockets      (Connection)
+import           Servant.Server          (ServerError (..), err400)
+import           Websockets.Websockets   (receiveJSONOrServerError, sendJSON)
 
 data BidRequest =
   BidRequest [IndexedValue Card]

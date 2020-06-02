@@ -8,7 +8,9 @@ import           Control.Lens
 import           Control.Monad.State.Lazy (StateT (..))
 import           Data.Semigroup.Foldable
 import           Data.Tuple.Homogenous
-import           Mu.Auction              (CardPositions (..), playAuctionAndRecord , FinishedBidding, Bid(..))
+import           Mu.Auction               (Bid (..), CardPositions (..),
+                                           FinishedBidding,
+                                           playAuctionAndRecord)
 import           Mu.Players
 import           TupleInstances
 import           Util                     (minus)
@@ -31,12 +33,7 @@ biddingNPlayers ::
   -> players [Card]
   -> m (FinishedBidding players player)
 biddingNPlayers tupleN nLens getBid firstPlayer cards =
-  playAuctionAndRecord
-    getBidStateful'
-    raiseThree
-    tupleN
-    firstPlayer
-    cards
+  playAuctionAndRecord getBidStateful' raiseThree tupleN firstPlayer cards
   where
     raiseThree n cards = set (nLens n) cards $ mempty
     getBidStateful' n = StateT $ getBidStateful'''

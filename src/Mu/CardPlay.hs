@@ -3,7 +3,8 @@
 
 module Mu.CardPlay where
 
-import           Cards                      (Card (..), Suit, Trump (..), ChiefTrump(..))
+import           Cards                      (Card (..), ChiefTrump (..), Suit,
+                                             Trump (..))
 import           Control.Lens
 import           Control.Monad              (replicateM)
 import           Control.Monad.State.Lazy
@@ -14,7 +15,8 @@ import           Data.Functor.Apply
 import           Data.Semigroup
 import           Data.Semigroup.Foldable
 import           Data.Semigroup.Traversable
-import           Mu.Auction                (CardPositions (..), Chief(..), ViceTrump(..))
+import           Mu.Auction                 (CardPositions (..), Chief (..),
+                                             ViceTrump (..))
 import           Mu.Players
 import           Util                       (remove)
 
@@ -41,8 +43,8 @@ playCardsStateful ::
   => (forall c. player -> Lens' (players c) c)
   -> (player -> [PlayableCard] -> m PlayableCard)
   -> NumberOfRounds
-  -> ChiefTrump 
-  -> Maybe ViceTrump 
+  -> ChiefTrump
+  -> Maybe ViceTrump
   -> Chief player
   -> players CardPositions
   -> m (players [Card])
@@ -128,10 +130,9 @@ trickCard (ChiefTrump chiefTrump) viceTrump (LedSuit ledSuit) card
   | otherwise = OtherCard
   where
     isHighestTrump = isTrump chiefTrump card
-    isLowerTrump = any (\(ViceTrump trump) -> isTrump trump card) viceTrump 
+    isLowerTrump = any (\(ViceTrump trump) -> isTrump trump card) viceTrump
     isOfLedSuit = suit card == ledSuit
     rank' = Rank (rank card)
-
 
 isTrump :: Trump -> Card -> Bool
 isTrump (SuitTrump trumpSuit) (Card cardSuit _) = trumpSuit == cardSuit

@@ -1,4 +1,5 @@
-{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Mu.Auction where
 
 import           Cards
@@ -24,7 +25,9 @@ data Bid
   deriving (Show, Eq)
 
 newtype Chief player =
-  Chief { getChief :: player }
+  Chief
+    { getChief :: player
+    }
   deriving (Eq, Show)
 
 data BiddingResult player
@@ -67,14 +70,19 @@ data FinishedBidding players player
   = Successful (SuccessfulBidding players player)
   | Unsuccessful (Stalemate player)
 
-newtype TopBid = TopBid Int deriving (Show, Eq, Ord)
+newtype TopBid =
+  TopBid Int
+  deriving (Show, Eq, Ord)
 
-newtype Vice player = Vice { getVice :: player }
+newtype Vice player =
+  Vice
+    { getVice :: player
+    }
 
 data SuccessfulBidding players player =
   SuccessfulBidding
-    { chief   :: Chief player
-    , vice :: Maybe (Vice player)
+    { chief            :: Chief player
+    , vice             :: Maybe (Vice player)
     , successfulTopBid :: TopBid
     , biddingPositions :: players CardPositions
     }
@@ -85,13 +93,11 @@ data CardPositions =
     , onTable :: [Card]
     }
 
-
 finishBidding ::
      (BiddingResult player, players CardPositions)
   -> FinishedBidding players player
 finishBidding (SuccessfulBiddingResult (WinnersAndTopBid chief vice topBid), cardPositions) =
   Successful (SuccessfulBidding chief vice topBid cardPositions)
-
 
 initialPositions :: [Card] -> CardPositions
 initialPositions cards = CardPositions {inHand = cards, onTable = []}
@@ -122,10 +128,11 @@ tallyAuction ::
   => players (player, [Card])
   -> BiddingResult player
 tallyAuction playerCards =
-  if topBid == TopBid(0)
+  if topBid == TopBid (0)
     then UnsuccessfulBiddingResult (EklatNoPoints)
     else case NE.reverse maxBidders' of
-           chief :| [] -> SuccessfulBiddingResult (successful (Chief chief) topBid)
+           chief :| [] ->
+             SuccessfulBiddingResult (successful (Chief chief) topBid)
            lastPlayerToRaise :| penultimate:others ->
              UnsuccessfulBiddingResult
                (Eklat topBid lastPlayerToRaise (penultimate :| others))
@@ -135,7 +142,7 @@ tallyAuction playerCards =
     vice chief =
       case vices chief of
         [vice] -> (Just (Vice vice))
-        _      ->  Nothing
+        _      -> Nothing
     vices (Chief chief) =
       maxBidders . foldMap viceBids . NE.filter (notPlayer chief) $
       toNonEmpty playerCards
@@ -181,7 +188,8 @@ playAuctionAndRecord ::
   -> players2 [Card]
   -> f (FinishedBidding players2 player)
 playAuctionAndRecord getBid raise players firstPlayer cards =
-  fmap finishBidding . runStateT (playAuction getBid raise players firstPlayer) $ fmap initialPositions cards
+  fmap finishBidding . runStateT (playAuction getBid raise players firstPlayer) $
+  fmap initialPositions cards
 
 bid :: [Card] -> Bid
 bid []    = Pass
@@ -232,31 +240,38 @@ class Ord a =>
 instance (Monoid players, Zeroed bid) => Monoid (MaxBidders players bid) where
   mempty = MaxBidders zero mempty
 
-newtype IsMoreThanThreePlayers = IsMoreThanThreePlayers Bool
+newtype IsMoreThanThreePlayers =
+  IsMoreThanThreePlayers Bool
 
-newtype ViceTrump = ViceTrump Trump
-newtype Partner player = Partner player 
+newtype ViceTrump =
+  ViceTrump Trump
+
+newtype Partner player =
+  Partner player
 
 data TrumpsAndPartner player =
   TrumpsAndPartner
-    { chiefTrump     :: ChiefTrump
-    , viceTrump :: Maybe ViceTrump
-    , partner :: Maybe (Partner player)
+    { chiefTrump :: ChiefTrump
+    , viceTrump  :: Maybe ViceTrump
+    , partner    :: Maybe (Partner player)
     }
 
-settleAuctionRound
-  :: Monad m =>
-     IsMoreThanThreePlayers
-     -> (vice -> cards -> m ViceTrump)
-     -> (chief -> cards -> m ChiefTrump)
-     -> (chief -> players -> m (Partner player))
-     -> players
-     -> (chief, cards)
-     -> Maybe (vice, cards)
-     -> m (TrumpsAndPartner player)
-settleAuctionRound (IsMoreThanThreePlayers isMoreThanThreePlayers) getViceTrump getChiefTrump getPartner players (chief, chiefCards) viceAndCards = do 
-  viceTrump <- traverse (uncurry getViceTrump ) viceAndCards
+settleAuctionRound ::
+     Monad m
+  => IsMoreThanThreePlayers
+  -> (vice -> cards -> m ViceTrump)
+  -> (chief -> cards -> m ChiefTrump)
+  -> (chief -> players -> m (Partner player))
+  -> players
+  -> (chief, cards)
+  -> Maybe (vice, cards)
+  -> m (TrumpsAndPartner player)
+settleAuctionRound (IsMoreThanThreePlayers isMoreThanThreePlayers) getViceTrump getChiefTrump getPartner players (chief, chiefCards) viceAndCards = do
+  viceTrump <- traverse (uncurry getViceTrump) viceAndCards
   chiefTrump <- getChiefTrump chief chiefCards
-  partner <- if isMoreThanThreePlayers then fmap Just  (getPartner chief players) else return Nothing
-  return TrumpsAndPartner {chiefTrump, viceTrump, partner} where
-
+  partner <-
+    if isMoreThanThreePlayers
+      then fmap Just (getPartner chief players)
+      else return Nothing
+  return TrumpsAndPartner {chiefTrump, viceTrump, partner}
+  where
