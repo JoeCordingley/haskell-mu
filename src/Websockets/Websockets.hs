@@ -69,10 +69,8 @@ server ::
   -> Name
   -> Connection
   -> m ()
-server stateRef name conn = keepAlive commmunication
+server stateRef name conn = keepAlive conn commmunication
   where
-    keepAlive =
-      liftEither <=< liftIO . withPingThread conn 30 (pure ()) . runExceptT
     commmunication = do
       addConn'
       broadcastPlayers'
@@ -93,6 +91,13 @@ server stateRef name conn = keepAlive commmunication
       when (isJust $ sequence t) (sendJSON conn StartMsg)
     broadcastUpdateToUsers n (State users t) =
       traverse_ (broadcastUpdateToUser t n) users
+
+keepAlive
+  :: (MonadError e m, MonadIO m) => Connection
+     -> ExceptT e IO c
+     -> m c
+keepAlive conn =
+  liftEither <=< liftIO . withPingThread conn 30 (pure ()) . runExceptT
 
 data StartMsg =
   StartMsg
@@ -256,3 +261,4 @@ instance Show NOfThree where
   show OneOfThree   = "1"
   show TwoOfThree   = "2"
   show ThreeOfThree = "3"
+

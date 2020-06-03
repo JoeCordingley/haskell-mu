@@ -273,18 +273,27 @@ data TrumpsAndPartner player =
 settleAuctionRound ::
      Monad m
   => IsMoreThanThreePlayers
-  -> (vice -> cards -> m ViceTrump)
-  -> (chief -> cards -> m ChiefTrump)
+  -> (vice -> [Trump] -> m ViceTrump)
+  -> (chief -> [Trump] -> m ChiefTrump)
   -> (chief -> players -> m (Partner player))
   -> players
-  -> (chief, cards)
-  -> Maybe (vice, cards)
+  -> (chief, [Card])
+  -> Maybe (vice, [Card])
   -> m (TrumpsAndPartner player)
 settleAuctionRound (IsMoreThanThreePlayers isMoreThanThreePlayers) getViceTrump getChiefTrump getPartner players (chief, chiefCards) viceAndCards = do
-  viceTrump <- traverse (uncurry getViceTrump) viceAndCards
-  chiefTrump <- getChiefTrump chief chiefCards
+  viceTrump <- traverse (uncurry getViceTrump . fmap getViceTrumpOptions) viceAndCards
+  chiefTrump <- getChiefTrump chief $ getChiefTrumpOptions chiefCards
   partner <-
     if isMoreThanThreePlayers
       then fmap Just (getPartner chief players)
       else return Nothing
   return TrumpsAndPartner {chiefTrump, viceTrump, partner}
+
+getViceTrumpOptions :: [Card] -> [Trump]
+getViceTrumpOptions cards = nub trumps where
+  trumps = do
+    card <- cards
+    [SuitTrump $ suit card, RankTrump $ rank card]
+
+getChiefTrumpOptions :: [Card] -> [Trump]
+getChiefTrumpOptions = (NoTrump:) . getViceTrumpOptions

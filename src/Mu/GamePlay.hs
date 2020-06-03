@@ -55,8 +55,8 @@ data Stages f players player =
 data Dependencies f players player =
   Dependencies
     { getBid        :: player -> [Card] -> f Bid
-    , getViceTrump  :: Vice player -> [Card] -> f ViceTrump
-    , getChiefTrump :: Chief player -> [Card] -> f ChiefTrump
+    , getViceTrump  :: Vice player -> [Trump] -> f ViceTrump
+    , getChiefTrump :: Chief player -> [Trump] -> f ChiefTrump
     , getPartner    :: Chief player -> players player -> f (Partner player)
     , getCard       :: player -> [PlayableCard] -> f PlayableCard
     }

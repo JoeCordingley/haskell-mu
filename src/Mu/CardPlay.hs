@@ -48,34 +48,83 @@ playCardsStateful ::
   -> Chief player
   -> players CardPositions
   -> m (players [Card])
-playCardsStateful l getCardFromAvailable =
-  fmap playableCards -.**** evalStateT .*** playCards l (StateT . getCard)
+playCardsStateful l getCardFromAvailable numberOfRounds chiefTrump viceTrump =
+  fmap playableCards -.* evalStateT . playCards' 
   where
     getCard player cards =
-      removeFrom player cards <$>
+      mapFst fst . removeFrom l player cards <$>
       getCardFromAvailable player (view (l player) cards)
-    removeFrom player cards card =
-      (fst card, over (l player) (remove card) cards)
+    playCards' = playCards (playTrick l (StateT . getCard) chiefTrump viceTrump) numberOfRounds 
 
-playCards ::
+playCardsStatefulWithUpdate ::
      ( Monoid (players [Card])
      , Monoid (players ())
      , Monad m
      , Traversable1 players
      , Cycling player
      )
-  => (player -> ASetter' (players [Card]) [Card])
-  -> (player -> m Card)
+  => (WinnerOfTrick player -> m ())
+  -> (forall c. player -> Lens' (players c) c)
+  -> (player -> [PlayableCard] -> m PlayableCard)
   -> NumberOfRounds
   -> ChiefTrump
   -> Maybe ViceTrump
   -> Chief player
+  -> players CardPositions
   -> m (players [Card])
-playCards l getCard (NumberOfRounds numberOfRounds) chiefTrump viceTrump (Chief firstPlayer) =
+playCardsStatefulWithUpdate update l getCardFromAvailable numberOfRounds chiefTrump viceTrump=
+  fmap playableCards -.* evalStateT . playCards'  where
+    getCard player cards =
+      mapFst fst . removeFrom l player cards <$>
+      getCardFromAvailable player (view (l player) cards)
+    playCards' = playCards (playTrickAndUpdate (lift . update) l (StateT . getCard) chiefTrump viceTrump) numberOfRounds 
+      
+
+
+removeFrom
+  :: Eq a =>
+     (t -> ASetter' s [a] )
+     -> t -> s -> a -> (a, s)
+removeFrom l player cards card =
+  (card, over (l player) (remove card) cards)
+
+mapFst :: (a -> b) -> (a, c) -> (b, c)
+mapFst f (a, b) = (f a, b)
+
+
+
+playCards
+  :: (Monoid (players [Card]), Monad m) =>
+     (s -> m (WonTrick players s))
+     -> NumberOfRounds -> Chief s -> m (players [Card])
+playCards playTrick (NumberOfRounds numberOfRounds) (Chief firstPlayer) = 
   evalStateT roundState firstPlayer
   where
     roundState = fold <$> replicateM numberOfRounds trickState
-    trickState = StateT $ playTrick l getCard chiefTrump viceTrump
+    trickState = StateT $ fmap (fmap getWinner . getWonTrick) . playTrick
+
+playTrickAndUpdate
+  :: (Monad m, Traversable1 players,
+      Monoid (players [Card]), Monoid (players ()), Cycling player) =>
+     (WinnerOfTrick player -> m a)
+     -> (player -> ASetter' (players [Card]) [Card])
+     -> (player -> m Card)
+     -> ChiefTrump
+     -> Maybe ViceTrump
+     -> player
+     -> m (WonTrick players player)
+playTrickAndUpdate update l getCard chiefTrump viceTrump player = do
+  wonTrick <- playTrick l getCard chiefTrump viceTrump player
+  update . snd $ getWonTrick wonTrick
+  return wonTrick
+
+newtype WinnerOfTrick player = WinnerOfTrick 
+  { getWinner :: player }
+  
+
+newtype WonTrick players player = WonTrick 
+  { getWonTrick :: (players [Card], WinnerOfTrick player)
+  }
 
 playTrick ::
      ( Traversable1 players
@@ -89,9 +138,9 @@ playTrick ::
   -> ChiefTrump
   -> Maybe ViceTrump
   -> player
-  -> m (players [Card], player)
+  -> m (WonTrick players player)
 playTrick l getCard chiefTrump viceTrump firstPlayer =
-  cardsAndWinner l chiefTrump viceTrump <$> traverse (withInput getCard) players
+  wonTrick l chiefTrump viceTrump <$> traverse (withInput getCard) players
   where
     players = playersStartingFrom firstPlayer
 
@@ -99,14 +148,14 @@ playersStartingFrom ::
      (Traversable f, Monoid (f ()), Cycling player) => player -> f player
 playersStartingFrom = evalState $ traverseEmpty players
 
-cardsAndWinner ::
-     (Functor t, Foldable1 t, Monoid (t [Card]))
-  => (player -> ASetter' (t [Card]) [Card])
+wonTrick ::
+     (Functor players, Foldable1 players, Monoid (players [Card]))
+  => (player -> ASetter' (players [Card]) [Card])
   -> ChiefTrump
   -> Maybe ViceTrump
-  -> t (player, Card)
-  -> (t [Card], player)
-cardsAndWinner l chiefTrump viceTrump playerCards = (wonCards, winner)
+  -> players (player, Card)
+  -> WonTrick players player
+wonTrick l chiefTrump viceTrump playerCards = WonTrick (wonCards, WinnerOfTrick(winner))
   where
     wonCards = set (l winner) (toList cards) mempty
     cards = fmap snd $ playerCards

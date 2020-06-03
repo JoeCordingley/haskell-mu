@@ -12,6 +12,7 @@ import           Cards                   (Card (..), Suit (..))
 import           Control.Lens            hiding ((.=))
 import           Control.Monad.Except    (MonadError, liftEither)
 import           Control.Monad.Fail      (fail)
+import qualified Control.Monad.List      as ML
 import           Data.Aeson
 import qualified Data.Aeson              as JSON
 import qualified Data.List.Index         as List
@@ -71,6 +72,26 @@ instance FromJSON BidResponse where
 
 indexList :: [a] -> Map Int a
 indexList = Map.fromList . List.indexed
+
+indexed' :: MonadError Text m => (Map Int a -> m Int) -> [a] -> m a
+indexed' f as = do
+  i <- f map
+  case Map.lookup i map of
+    Just a -> return a
+    Nothing -> throwError $ "no " <> show i
+  where
+    map = indexList as
+
+indexedMany :: MonadError Text m => (Map Int a -> m [Int]) -> [a] -> m [a]
+indexedMany f as = do
+  is <- f map
+  traverse lookup is 
+  where
+    lookup i = case Map.lookup i map of
+      Just a -> return a
+      Nothing -> throwError $ "no " <> show i
+    map = indexList as
+  
 
 getBidWS ::
      (MonadIO m, MonadError ServerError m)
@@ -160,3 +181,4 @@ values m = toEither . traverse get'
 
 unknownKey :: Show k => NonEmpty k -> ServerError
 unknownKey keys = err400 {errBody = "invalid keys: " <> show keys}
+
