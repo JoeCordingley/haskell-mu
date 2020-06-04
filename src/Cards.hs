@@ -3,6 +3,7 @@
 module Cards where
 
 import           Data.Monoid (Sum)
+import Data.Aeson
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
@@ -29,6 +30,9 @@ newtype Score =
     { getScore :: Int
     }
   deriving (Num, Eq, Ord)
+
+instance ToJSON Score where
+  toJSON = toJSON . getScore
 
 instance Semigroup Score where
   Score l <> Score r = Score (l + r)
@@ -74,3 +78,4 @@ data Trump
   | RankTrump Int
   | NoTrump
   deriving (Eq, Show)
+

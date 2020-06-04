@@ -4,7 +4,7 @@ import           Mu.Deal
 import qualified Websockets.Websockets as WS
 
 main :: IO ()
-main = undefined
+main = WS.main
 --fivePlayerAuction :: IO ()
 --fivePlayerAuction = do
 --  startingHands <- newFivePlayerInitialHands
