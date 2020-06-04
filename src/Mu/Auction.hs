@@ -21,6 +21,7 @@ import           Data.Tuple.Homogenous
 import           Mu.Players
 import           TupleInstances
 import           Util
+import           Data.Function.Syntax
 
 newtype CardsBid =
   CardsBid Int
@@ -175,6 +176,27 @@ playAuction getBid raise players firstPlayer =
   where
     n = length players
 
+playAuctionAndUpdate ::
+     ( Foldable1 players
+     , Traversable players
+     , Eq player
+     , Monad f
+     , Monoid (players [Card])
+     , Cycling player
+     , Applicative players
+     )
+  => (BiddingResult player -> f ())
+  -> (player -> f Bid)
+  -> (player -> [Card] -> players [Card])
+  -> players player
+  -> player
+  -> f (BiddingResult player)
+playAuctionAndUpdate update = update' .*** playAuction where
+  update' fResult = do
+    result <- fResult
+    update result
+    return result
+
 playAuctionAndRecord ::
      ( Foldable1 players
      , Traversable players
@@ -193,17 +215,49 @@ playAuctionAndRecord ::
   -> f (FinishedBidding players player)
 playAuctionAndRecord players l getBid firstPlayer =
   fmap finishBidding .
-  runStateT (playAuction (StateT . getBid') raise players firstPlayer) .
+  runStateT (playAuction (StateT . getBidStateful getBid l) raise players firstPlayer) .
   fmap initialPositions
   where
-    getBid' player = getCompose . (l player) (Compose . getBidAndUpdate player)
-    getBidAndUpdate player cardPositions =
-      update cardPositions <$> getBid player (inHand cardPositions)
-    update CardPositions {inHand, onTable} (Raise cards) =
-      ( Raise cards
-      , CardPositions {inHand = minus cards inHand, onTable = cards <> onTable})
-    update cardPositions Pass = (Pass, cardPositions)
     raise player cards = set (l player) cards mempty
+
+playAuctionAndRecordWithUpdate ::
+     ( Foldable1 players
+     , Traversable players
+     , Eq player
+     , Monad f
+     , Monoid (players [Card])
+     , Cycling player
+     , Applicative players
+     , Functor players
+     )
+  => (BiddingResult player -> f ())
+  -> players player
+  -> (forall c. player -> Lens' (players c) c)
+  -> (player -> [Card] -> f Bid)
+  -> player
+  -> players [Card]
+  -> f (FinishedBidding players player)
+playAuctionAndRecordWithUpdate updateResult players l getBid firstPlayer =
+  fmap finishBidding .
+  runStateT (playAuctionAndUpdate (lift . updateResult) (StateT . getBidStateful getBid l) raise players firstPlayer) .
+  fmap initialPositions where
+    raise player cards = set (l player) cards mempty
+
+getBidStateful
+  :: Functor f =>
+     (player -> [Card] -> f Bid)
+     -> (player -> LensLike' (Compose f ((,) Bid)) players CardPositions)
+     -> player
+     -> players
+     -> f (Bid, players)
+getBidStateful getBid l player = getCompose . (l player) (Compose . getBidAndUpdate player) where
+  getBidAndUpdate player cardPositions =
+    update cardPositions <$> getBid player (inHand cardPositions)
+  update CardPositions {inHand, onTable} (Raise cards) =
+    ( Raise cards
+    , CardPositions {inHand = minus cards inHand, onTable = cards <> onTable})
+  update cardPositions Pass = (Pass, cardPositions)
+
 
 bid :: [Card] -> Bid
 bid []    = Pass

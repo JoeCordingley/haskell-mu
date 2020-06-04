@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE RankNTypes    #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -7,6 +8,8 @@ import           Cards                      (Card (..), ChiefTrump (..), Suit,
                                              Trump (..))
 import           Control.Lens
 import           Control.Monad              (replicateM)
+import           Control.Monad.Reader (MonadReader, ask, asks)
+
 import           Control.Monad.State.Lazy
 import           Data.Foldable              (fold)
 import           Data.Foldable              (toList)
@@ -56,6 +59,7 @@ playCardsStateful l getCardFromAvailable numberOfRounds chiefTrump viceTrump =
       getCardFromAvailable player (view (l player) cards)
     playCards' = playCards (playTrick l (StateT . getCard) chiefTrump viceTrump) numberOfRounds 
 
+
 playCardsStatefulWithUpdate ::
      ( Monoid (players [Card])
      , Monoid (players ())
@@ -78,8 +82,6 @@ playCardsStatefulWithUpdate update l getCardFromAvailable numberOfRounds chiefTr
       mapFst fst . removeFrom l player cards <$>
       getCardFromAvailable player (view (l player) cards)
     playCards' = playCards (playTrickAndUpdate (lift . update) l (StateT . getCard) chiefTrump viceTrump) numberOfRounds 
-      
-
 
 removeFrom
   :: Eq a =>
@@ -90,7 +92,6 @@ removeFrom l player cards card =
 
 mapFst :: (a -> b) -> (a, c) -> (b, c)
 mapFst f (a, b) = (f a, b)
-
 
 
 playCards
@@ -144,6 +145,7 @@ playTrick l getCard chiefTrump viceTrump firstPlayer =
   where
     players = playersStartingFrom firstPlayer
 
+
 playersStartingFrom ::
      (Traversable f, Monoid (f ()), Cycling player) => player -> f player
 playersStartingFrom = evalState $ traverseEmpty players
@@ -163,6 +165,26 @@ wonTrick l chiefTrump viceTrump playerCards = WonTrick (wonCards, WinnerOfTrick(
     winner = winningPlayer $ foldMap1 trickWinner playerCards
     trickWinner (player, card) =
       TrickWinner player (trickCard chiefTrump viceTrump ledSuit card)
+
+data CardPlayDeps players player = CardPlayDeps 
+  { plens :: forall c. player -> Lens' (players c) c 
+  , chiefTrump :: ChiefTrump
+  , viceTrump :: Maybe ViceTrump
+  }
+
+wonTrick2 ::
+     (Functor players, Foldable1 players, Monoid (players [Card]), MonadReader (CardPlayDeps players player) m)
+  => players (player, Card)
+  -> m (WonTrick players player)
+wonTrick2 playerCards = fmap (flip wonTrick playerCards) ask
+  where
+    wonTrick (CardPlayDeps l chiefTrump viceTrump) playerCards = WonTrick (wonCards, WinnerOfTrick(winner)) where
+      wonCards = set (l winner) (toList cards) mempty
+      cards = fmap snd $ playerCards
+      ledSuit = LedSuit . suit $ head1 cards
+      winner = winningPlayer $ foldMap1 trickWinner playerCards
+      trickWinner (player, card) =
+        TrickWinner player (trickCard chiefTrump viceTrump ledSuit card)
 
 head1 :: Foldable1 f => f a -> a
 head1 = getFirst . foldMap1 First

@@ -70,8 +70,8 @@ instance FromJSON BidResponse where
         is <- t .: "raise"
         pure (RaiseResponse is)
 
-indexList :: [a] -> Map Int a
-indexList = Map.fromList . List.indexed
+indexList :: Foldable t => t a -> Map Int a
+indexList = Map.fromList . List.indexed . toList
 
 indexed' :: MonadError Text m => (Map Int a -> m Int) -> [a] -> m a
 indexed' f as = do
