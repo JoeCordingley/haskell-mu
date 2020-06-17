@@ -22,6 +22,7 @@ import           Mu.Players
 import           TupleInstances
 import           Util
 import           Data.Function.Syntax
+import Data.Semigroup (Max(..), getMax)
 
 newtype CardsBid =
   CardsBid Int
@@ -103,6 +104,7 @@ finishBidding ::
   -> FinishedBidding players player
 finishBidding (SuccessfulBiddingResult (WinnersAndTopBid chief vice topBid), cardPositions) =
   Successful (SuccessfulBidding chief vice topBid cardPositions)
+finishBidding (UnsuccessfulBiddingResult stalemate, _) = Unsuccessful stalemate
 
 initialPositions :: [Card] -> CardPositions
 initialPositions cards = CardPositions {inHand = cards, onTable = []}
@@ -127,6 +129,11 @@ runAuction getBid raise numberOfPlayers firstPlayer =
         Pass -> runAuction' (passesLeft - 1)
         Raise cards ->
           ((raise player cards, [player]) <>) <$> runAuction' numberOfPlayers
+
+
+evalStatePair s (a,b) = evalStateT (evalStateT s a) b
+
+
 
 tallyAuction ::
      (Eq player, Foldable1 players)
@@ -156,6 +163,8 @@ tallyAuction playerCards =
     playerBids (player, cards) =
       MaxBidders (Semi.Max (CardsBid (length cards))) (player :| [])
 
+newtype MaxRaise = MaxRaise Int
+
 playAuction ::
      ( Foldable1 players
      , Traversable players
@@ -175,6 +184,7 @@ playAuction getBid raise players firstPlayer =
   runAuction getBid raise n firstPlayer
   where
     n = length players
+
 
 playAuctionAndUpdate ::
      ( Foldable1 players
@@ -209,16 +219,12 @@ playAuctionAndRecord ::
      )
   => players player
   -> (forall c. player -> Lens' (players c) c)
-  -> (player -> [Card] -> f Bid)
+  -> (player -> MaxRaise -> [Card] -> f Bid)
   -> player
   -> players [Card]
   -> f (FinishedBidding players player)
-playAuctionAndRecord players l getBid firstPlayer =
-  fmap finishBidding .
-  runStateT (playAuction (StateT . getBidStateful getBid l) raise players firstPlayer) .
-  fmap initialPositions
-  where
-    raise player cards = set (l player) cards mempty
+playAuctionAndRecord  = playAuctionAndRecordWithUpdate doNothing where
+  doNothing _ = return ()
 
 playAuctionAndRecordWithUpdate ::
      ( Foldable1 players
@@ -233,7 +239,7 @@ playAuctionAndRecordWithUpdate ::
   => (BiddingResult player -> f ())
   -> players player
   -> (forall c. player -> Lens' (players c) c)
-  -> (player -> [Card] -> f Bid)
+  -> (player -> MaxRaise -> [Card] -> f Bid)
   -> player
   -> players [Card]
   -> f (FinishedBidding players player)
@@ -244,15 +250,20 @@ playAuctionAndRecordWithUpdate updateResult players l getBid firstPlayer =
     raise player cards = set (l player) cards mempty
 
 getBidStateful
-  :: Functor f =>
-     (player -> [Card] -> f Bid)
-     -> (player -> LensLike' (Compose f ((,) Bid)) players CardPositions)
+  :: (Functor f, Foldable1 players) =>
+     (player ->  MaxRaise -> [Card] -> f Bid)
+     -> (player -> LensLike' (Compose f ((,) Bid)) (players CardPositions) CardPositions)
      -> player
-     -> players
-     -> f (Bid, players)
-getBidStateful getBid l player = getCompose . (l player) (Compose . getBidAndUpdate player) where
+     -> (players CardPositions)
+     -> f (Bid, (players CardPositions))
+getBidStateful getBid l player players = getCompose $ (l player) (Compose . getBidAndUpdate player) players where
+  highestBid = getMax $ foldMap1 (Max . length . onTable) players
   getBidAndUpdate player cardPositions =
-    update cardPositions <$> getBid player (inHand cardPositions)
+    update cardPositions <$> getBid player maxRaise cards where
+      cards = inHand cardPositions
+      maxRaise = MaxRaise $ maxBid - currentBid
+      maxBid = highestBid + 1
+      currentBid = length $ onTable cardPositions
   update CardPositions {inHand, onTable} (Raise cards) =
     ( Raise cards
     , CardPositions {inHand = minus cards inHand, onTable = cards <> onTable})
@@ -311,8 +322,8 @@ instance (Monoid players, Zeroed bid) => Monoid (MaxBidders players bid) where
 newtype IsMoreThanThreePlayers =
   IsMoreThanThreePlayers Bool
 
-newtype ViceTrump =
-  ViceTrump Trump
+newtype ViceTrump = ViceTrump
+  { getViceTrump :: Trump }
 
 newtype Partner player =
   Partner player deriving Eq

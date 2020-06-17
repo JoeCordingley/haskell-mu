@@ -6,6 +6,11 @@ module Util where
 import           Control.Applicative.Free (Ap (..), liftAp, runAp)
 import           Control.Lens             hiding ((<.>))
 import           Data.Functor.Identity
+import Data.Map.Lazy (Map)
+import qualified Data.Map.Lazy as Map
+import qualified Data.List.Index         as List
+import Data.Foldable
+
 
 data Mono x y a where
   Mono :: x -> Mono x y y
@@ -67,4 +72,7 @@ remove x (y:ys)
   | otherwise = y : (remove x ys)
 
 minus :: Eq a => [a] -> [a] -> [a]
-minus = foldr remove
+minus = flip $ foldr remove
+
+indexList :: Foldable t => t a -> Map Int a
+indexList = Map.fromList . List.indexed . toList

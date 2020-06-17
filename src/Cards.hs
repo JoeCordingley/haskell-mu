@@ -1,4 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cards where
 
@@ -18,12 +20,22 @@ data Suit
   | Green
   deriving (Enum, Eq, Show, Ord)
 
+instance ToJSON Suit where
+  toJSON Red    = String "Red"
+  toJSON Black  = String "Black"
+  toJSON Blue   = String "Blue"
+  toJSON Yellow = String "Yellow"
+  toJSON Green  = String "Green"
+
 data Card =
   Card
     { suit :: Suit
     , rank :: Rank
     }
   deriving (Eq, Show, Ord)
+
+instance ToJSON Card where
+  toJSON Card {suit, rank} = toJSON (suit, rank)
 
 newtype Score =
   Score

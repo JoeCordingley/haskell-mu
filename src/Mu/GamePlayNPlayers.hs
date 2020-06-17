@@ -15,8 +15,9 @@ import qualified Mu.Auction as Auction
 import Mu.Auction (IsMoreThanThreePlayers(..))
 import Mu.CardPlay
 import qualified Mu.Scoring as Scoring
+import Data.Functor.Bind
 
-playMuThreePlayers :: MonadRandom m => 
+playMuThreePlayers :: (MonadRandom m, Bind m) => 
   Dependencies m Tuple3 NOfThree -> EndCondition -> m (Tuple3 Score)
 playMuThreePlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition = playMu getCardPositions stages endCondition OneOfThree where
   getCardPositions = view . threeLens 
@@ -28,7 +29,7 @@ playMuThreePlayers (Dependencies getBid getViceTrump getChiefTrump getPartner ge
   scoreCardPlay = Scoring.scoreCardPlay threeLens threePlayers
   scoreStalemate = Scoring.scoreStalemate threeLens
 
-playMuThreePlayersWithUpdates :: MonadRandom m => 
+playMuThreePlayersWithUpdates :: (MonadRandom m, Bind m) => 
   Updates m NOfThree (Tuple3 Score) ->
   Dependencies m Tuple3 NOfThree -> EndCondition -> m (Tuple3 Score)
 playMuThreePlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinnerUpdate scoresUpdate) (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition = playMuWithUpdate scoresUpdate getCardPositions stages endCondition OneOfThree where
@@ -41,7 +42,7 @@ playMuThreePlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinne
   scoreCardPlay = Scoring.scoreCardPlay threeLens threePlayers
   scoreStalemate = Scoring.scoreStalemate threeLens
 
-playMuFourPlayers :: MonadRandom m => 
+playMuFourPlayers :: (MonadRandom m, Bind m) => 
   Dependencies m Tuple4 NOfFour -> EndCondition -> m (Tuple4 Score)
 playMuFourPlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition = playMu getCardPositions stages endCondition OneOfFour where
   getCardPositions = view . fourLens
@@ -53,7 +54,7 @@ playMuFourPlayers (Dependencies getBid getViceTrump getChiefTrump getPartner get
   scoreCardPlay = Scoring.scoreCardPlay fourLens fourPlayers
   scoreStalemate = Scoring.scoreStalemate fourLens
 
-playMuFourPlayersWithUpdates :: MonadRandom m => 
+playMuFourPlayersWithUpdates :: (MonadRandom m, Bind m) => 
   Updates m NOfFour (Tuple4 Score) ->
   Dependencies m Tuple4 NOfFour -> EndCondition -> m (Tuple4 Score)
 playMuFourPlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinnerUpdate scoresUpdate) (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition = playMuWithUpdate scoresUpdate getCardPositions stages endCondition OneOfFour where
@@ -66,7 +67,7 @@ playMuFourPlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinner
   scoreCardPlay = Scoring.scoreCardPlay fourLens fourPlayers
   scoreStalemate = Scoring.scoreStalemate fourLens
 
-playMuFivePlayers :: MonadRandom m => 
+playMuFivePlayers :: (MonadRandom m, Bind m) => 
   Dependencies m Tuple5 NOfFive -> EndCondition -> m (Tuple5 Score)
 playMuFivePlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition = playMu getCardPositions stages endCondition OneOfFive where
   getCardPositions = view . fiveLens
@@ -78,7 +79,7 @@ playMuFivePlayers (Dependencies getBid getViceTrump getChiefTrump getPartner get
   scoreCardPlay = Scoring.scoreCardPlay fiveLens fivePlayers
   scoreStalemate = Scoring.scoreStalemate fiveLens
 
-playMuFivePlayersWithUpdates :: MonadRandom m => 
+playMuFivePlayersWithUpdates :: (MonadRandom m, Bind m) => 
   Updates m NOfFive (Tuple5 Score) ->
   Dependencies m Tuple5 NOfFive -> EndCondition -> m (Tuple5 Score)
 playMuFivePlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinnerUpdate scoresUpdate) (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition = playMuWithUpdate scoresUpdate getCardPositions stages endCondition OneOfFive where
@@ -91,7 +92,7 @@ playMuFivePlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinner
   scoreCardPlay = Scoring.scoreCardPlay fiveLens fivePlayers
   scoreStalemate = Scoring.scoreStalemate fiveLens
 
-playMuSixPlayers :: MonadRandom m => 
+playMuSixPlayers :: (MonadRandom m, Bind m) => 
   Dependencies m Tuple6 NOfSix -> EndCondition -> m (Tuple6 Score)
 playMuSixPlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition = playMu getCardPositions stages endCondition OneOfSix where
   getCardPositions = view . sixLens
@@ -103,7 +104,7 @@ playMuSixPlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getC
   scoreCardPlay = Scoring.scoreCardPlay sixLens sixPlayers
   scoreStalemate = Scoring.scoreStalemate sixLens
 
-playMuSixPlayersWithUpdates :: MonadRandom m => 
+playMuSixPlayersWithUpdates :: (MonadRandom m, Bind m) => 
   Updates m NOfSix (Tuple6 Score) ->
   Dependencies m Tuple6 NOfSix -> EndCondition -> m (Tuple6 Score)
 playMuSixPlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinnerUpdate scoresUpdate) (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition = playMuWithUpdate scoresUpdate getCardPositions stages endCondition OneOfSix where

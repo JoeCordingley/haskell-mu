@@ -1,7 +1,7 @@
 module Main where
 
 import           Mu.Deal
-import qualified Websockets.Websockets as WS
+import qualified Mu.WebsocketTry as WS
 
 main :: IO ()
 main = WS.main

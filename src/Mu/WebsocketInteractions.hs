@@ -6,7 +6,7 @@ module Mu.WebsocketInteractions where
 
 import Cards (Card, Trump(..), ChiefTrump(..), Score)
 import           Network.WebSockets            (Connection)
-import Mu.BiddingWebsockets (indexList)
+import Util (indexList)
 import Mu.Auction 
 import Data.Aeson
 import Websockets.Websockets (receiveJSONOrServerError, sendJSON)
@@ -20,6 +20,7 @@ import Mu.GamePlay (ScoreUpdate(..), Dependencies(..), Updates(..), EndCondition
 import Mu.GamePlayNPlayers (playMuThreePlayersWithUpdates, playMuFourPlayersWithUpdates, playMuFivePlayersWithUpdates, playMuSixPlayersWithUpdates)
 import Data.Tuple.Homogenous
 import Control.Monad.Random
+import Data.Functor.Bind
 
 getMany :: (ToJSON b, MonadIO m, MonadError ServerError m) => Connection -> (Map Int a -> b) -> [a] -> m [a]
 getMany conn f as = do
@@ -43,7 +44,7 @@ getOne conn f as = do
 
 data RequestWithPlayer player a = RequestWithPlayer player a
 
-newtype BidRequest a = BidRequest a
+data BidRequest max cards = BidRequest max cards
 newtype ViceTrumpRequest a = ViceTrumpRequest a
 newtype ChiefTrumpRequest a = ChiefTrumpRequest a
 newtype PartnerRequest a = PartnerRequest a
@@ -55,8 +56,8 @@ newtype TrickWinnerUpdate a = TrickWinnerUpdate a
 instance (ToJSON player, ToJSON a) => ToJSON (RequestWithPlayer player a) where
   toJSON (RequestWithPlayer player a) = object ["player" .= player, "request" .= a]
 
-instance ToJSON a => ToJSON (BidRequest a) where
-  toJSON (BidRequest a) = object ["bid" .= a]
+instance (ToJSON max, ToJSON cards) => ToJSON (BidRequest max cards) where
+  toJSON (BidRequest max cards) = object ["bid" .= object [ "max" .= max, "cards" .= cards ]]
 
 instance ToJSON a => ToJSON (ViceTrumpRequest a) where
   toJSON (ViceTrumpRequest a) = object ["vice-trump" .= a]
@@ -104,8 +105,8 @@ instance ToJSON CardPosition where
   toJSON OnTable = "on table"
 
 
-getBidSingle :: (ToJSON player, MonadIO m, MonadError ServerError m) => Connection -> player -> [Card] -> m Bid
-getBidSingle conn player = fmap toBid . getMany conn (RequestWithPlayer player . BidRequest)
+getBidSingle :: (ToJSON player, MonadIO m, MonadError ServerError m) => Connection -> player -> MaxRaise -> [Card] -> m Bid
+getBidSingle conn player (MaxRaise max) = fmap toBid . getMany conn (RequestWithPlayer player . BidRequest max)
 
 getViceTrumpSingle :: (ToJSON player, MonadIO m, MonadError ServerError m) => Connection -> Vice player -> [Trump] -> m ViceTrump
 getViceTrumpSingle conn (Vice player) = fmap ViceTrump . getOne conn (RequestWithPlayer player . ViceTrumpRequest)
@@ -133,11 +134,11 @@ scoresUpdateWS conn = sendJSON conn
 
 singleConnectionDeps :: (MonadIO f, MonadError ServerError f, ToJSON player, Foldable players) => Connection -> Dependencies f players player
 singleConnectionDeps conn = Dependencies 
-  { getBid = getBidSingle conn 
-  , getViceTrump = getViceTrumpSingle conn
-  , getChiefTrump = getChiefTrumpSingle conn
-  , getPartner = getPartnerSingle conn
-  , getCard = getCardSingle conn
+  { requestBid = getBidSingle conn 
+  , requestViceTrump = getViceTrumpSingle conn
+  , requestChiefTrump = getChiefTrumpSingle conn
+  , requestPartner = getPartnerSingle conn
+  , requestCard = getCardSingle conn
   }
 
 singleConnectionUpdates :: (MonadIO f, MonadError ServerError f, ToJSON player, ToJSON scores) => Connection -> Updates f player scores
@@ -149,19 +150,19 @@ singleConnectionUpdates conn = Updates
   }
 
 playMuSingleConnectionThreePlayers
-  :: (MonadRandom m, MonadIO m, MonadError ServerError m) => Connection -> EndCondition -> m (Tuple3 Score)
+  :: (MonadRandom m, MonadIO m, MonadError ServerError m, Bind m) => Connection -> EndCondition -> m (Tuple3 Score)
 playMuSingleConnectionThreePlayers conn = playMuThreePlayersWithUpdates (singleConnectionUpdates conn) (singleConnectionDeps conn)
 
 playMuSingleConnectionFourPlayers
-  :: (MonadRandom m, MonadIO m, MonadError ServerError m) => Connection -> EndCondition -> m (Tuple4 Score)
+  :: (MonadRandom m, MonadIO m, MonadError ServerError m, Bind m) => Connection -> EndCondition -> m (Tuple4 Score)
 playMuSingleConnectionFourPlayers conn = playMuFourPlayersWithUpdates (singleConnectionUpdates conn) (singleConnectionDeps conn)
 
 playMuSingleConnectionFivePlayers
-  :: (MonadRandom m, MonadIO m, MonadError ServerError m) => Connection -> EndCondition -> m (Tuple5 Score)
+  :: (MonadRandom m, MonadIO m, MonadError ServerError m, Bind m) => Connection -> EndCondition -> m (Tuple5 Score)
 playMuSingleConnectionFivePlayers conn = playMuFivePlayersWithUpdates (singleConnectionUpdates conn) (singleConnectionDeps conn)
 
 playMuSingleConnectionSixPlayers
-  :: (MonadRandom m, MonadIO m, MonadError ServerError m) => Connection -> EndCondition -> m (Tuple6 Score)
+  :: (MonadRandom m, MonadIO m, MonadError ServerError m, Bind m) => Connection -> EndCondition -> m (Tuple6 Score)
 playMuSingleConnectionSixPlayers conn = playMuSixPlayersWithUpdates (singleConnectionUpdates conn) (singleConnectionDeps conn)
 
 instance ToJSON Trump where

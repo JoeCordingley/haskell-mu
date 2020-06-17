@@ -92,14 +92,6 @@ server stateRef name conn = keepAlive conn commmunication
     broadcastUpdateToUsers n (State users t) =
       traverse_ (broadcastUpdateToUser t n) users
 
---threePlayerTwoRounds ::
---    (MonadIO m, MonadError ServerError m) 
---    => Connection
---    -> m ()
---threePlayerTwoRounds conn = keepAlive conn play where
---  play = do
---    score <- playMuSingleConnectionThreePlayers conn (SetNumberOfRounds 2)
---    return ()
 
 keepAlive
   :: (MonadError e m, MonadIO m) => Connection
