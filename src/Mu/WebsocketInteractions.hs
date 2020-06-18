@@ -6,8 +6,7 @@
 
 module Mu.WebsocketInteractions where
 
-import           Cards                    (Card, ChiefTrump (..), Score,
-                                           Trump (..))
+import           Cards                    (Card, Score, Trump (..))
 import           Control.Lens             hiding ((.=))
 import           Control.Monad.Except
 import           Control.Monad.IO.Class
@@ -401,7 +400,3 @@ instance ToJSON Trump where
   toJSON (SuitTrump suit) = toJSON suit
   toJSON (RankTrump rank) = toJSON rank
   toJSON NoTrump          = String "no trump"
-
-toBid :: [Card] -> Bid
-toBid []    = Pass
-toBid cards = Raise cards

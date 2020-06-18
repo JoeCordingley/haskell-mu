@@ -80,9 +80,6 @@ reducedDeck = deck reducedSuits
 
 fullDeck = deck allSuits
 
-newtype ChiefTrump =
-  ChiefTrump Trump
-
 --data Trumps = Trumps { chiefTrump :: Trump, viceTrump :: Maybe Trump }
 --  deriving (Show)
 data Trump

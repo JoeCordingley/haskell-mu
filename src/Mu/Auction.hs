@@ -374,3 +374,10 @@ getViceTrumpOptions cards = nub trumps
 
 getChiefTrumpOptions :: [Card] -> [Trump]
 getChiefTrumpOptions = (NoTrump :) . getViceTrumpOptions
+
+toBid :: [Card] -> Bid
+toBid []    = Pass
+toBid cards = Raise cards
+
+newtype ChiefTrump =
+  ChiefTrump Trump

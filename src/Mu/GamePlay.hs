@@ -8,6 +8,7 @@ import           Control.Lens
 import           Control.Monad.Loops
 import           Control.Monad.State.Class
 import           Control.Monad.State.Lazy
+import           Data.Foldable
 import           Data.Semigroup
 import           Data.Semigroup.Foldable
 import           Mu.Auction
@@ -104,12 +105,91 @@ data Dependencies f players player =
     , requestCard       :: player -> [PlayableCard] -> f PlayableCard
     }
 
+data SingularDependencies f players player =
+  SingularDependencies
+    { requestBidSingular        :: MaxRaise -> [Card] -> f Bid
+    , requestViceTrumpSingular  :: [Trump] -> f ViceTrump
+    , requestChiefTrumpSingular :: [Trump] -> f ChiefTrump
+    , requestPartnerSingular    :: players player -> f (Partner player)
+    , requestCardSingular       :: [PlayableCard] -> f PlayableCard
+    }
+
+data MoveUpdates f player =
+  MoveUpdates
+    { bidUpdate        :: player -> Bid -> f ()
+    , viceTrumpUpdate  :: player -> ViceTrump -> f ()
+    , chiefTrumpUpdate :: player -> ChiefTrump -> f ()
+    , partnerUpdate    :: player -> Partner player -> f ()
+    , cardUpdate       :: player -> PlayableCard -> f ()
+    }
+
+dependencies ::
+     (Foldable t, Monad f)
+  => (player -> moveUpdates -> t (MoveUpdates f player))
+  -> (player -> singularDependencies -> SingularDependencies f players player)
+  -> singularDependencies
+  -> moveUpdates
+  -> Dependencies f players player
+dependencies except isPlayer singularDependencies moveUpdates =
+  Dependencies
+    { requestBid
+    , requestViceTrump
+    , requestChiefTrump
+    , requestPartner
+    , requestCard
+    }
+  where
+    requestBid player maxRaise cards =
+      requestAndUpdate
+        player
+        (maxRaise, cards)
+        (uncurry . requestBidSingular)
+        bidUpdate
+    requestViceTrump (Vice player) trumps =
+      requestAndUpdate player trumps requestViceTrumpSingular viceTrumpUpdate
+    requestChiefTrump (Chief player) trumps =
+      requestAndUpdate player trumps requestChiefTrumpSingular chiefTrumpUpdate
+    requestPartner (Chief player) players =
+      requestAndUpdate player players requestPartnerSingular partnerUpdate
+    requestCard player cards =
+      requestAndUpdate player cards requestCardSingular cardUpdate
+    requestAndUpdate player args request update = do
+      move <- request (isPlayer player singularDependencies) args
+      traverse_
+        (\updates -> update updates player move)
+        (except player moveUpdates)
+      pure move
+
 data Updates f player scores =
   Updates
     { dealUpdate          :: player -> [Card] -> f ()
     , biddingResultUpdate :: BiddingResult player -> f ()
     , trickWinnerUpdate   :: WinnerOfTrick player -> f ()
     , scoresUpdate        :: ScoreUpdate scores -> f ()
+    }
+
+updates ::
+     (Foldable t, Applicative f)
+  => t (SingularUpdates f player scores)
+  -> (player -> t (SingularUpdates f player scores) -> SingularUpdates f player scores)
+  -> Updates f player scores
+updates singularUpdates players =
+  Updates {dealUpdate, biddingResultUpdate, trickWinnerUpdate, scoresUpdate}
+  where
+    dealUpdate player = singularDealUpdate (players player singularUpdates)
+    biddingResultUpdate result =
+      traverse_ (\u -> singularBiddingResultUpdate u result) singularUpdates
+    trickWinnerUpdate result =
+      traverse_ (\u -> singularTrickWinnerUpdate u result) singularUpdates
+    scoresUpdate result =
+      traverse_ (\u -> singularScoresUpdate u result) singularUpdates
+
+data SingularUpdates f player scores =
+  SingularUpdates
+    { singularDealUpdate          :: [Card] -> f ()
+    , singularBiddingResultUpdate :: BiddingResult player -> f ()
+    , singularTrickWinnerUpdate   :: WinnerOfTrick player -> f ()
+    , singularScoresUpdate        :: ScoreUpdate scores -> f ()
     }
 
 gameRound ::

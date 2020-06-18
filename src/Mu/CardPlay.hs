@@ -5,8 +5,7 @@
 
 module Mu.CardPlay where
 
-import           Cards                    (Card (..), ChiefTrump (..), Suit,
-                                           Trump (..))
+import           Cards                    (Card (..), Suit, Trump (..))
 import           Control.Applicative
 import           Control.Lens             hiding ((<.>))
 import           Control.Monad.Reader
@@ -19,8 +18,8 @@ import           Data.Functor.Compose
 import           Data.Maybe
 import           Data.Semigroup
 import           Data.Semigroup.Foldable
-import           Mu.Auction               (ViceTrump (..))
-import           Mu.Auction               (CardPositions (..), Chief (..))
+import           Mu.Auction               (CardPositions (..), Chief (..),
+                                           ChiefTrump (..), ViceTrump (..))
 import           Mu.Players               (Cycling, players)
 import           Util                     (remove)
 

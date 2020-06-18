@@ -3,15 +3,15 @@
 
 module Mu.Scoring where
 
-import           Cards              (Card, ChiefTrump (..), Score (..),
-                                     Trump (..), points, rank)
+import           Cards              (Card, Score (..), Trump (..), points, rank)
 import           Control.Lens       hiding ((<|))
 import           Data.Foldable      (find)
 import           Data.List.NonEmpty ((<|))
 import           Data.Monoid        (Endo (..))
 import           Data.Semigroup     (Sum (..))
-import           Mu.Auction         (CardsBid (..), Chief (..), Partner (..),
-                                     Stalemate (..), TrumpsAndPartner (..))
+import           Mu.Auction         (CardsBid (..), Chief (..), ChiefTrump (..),
+                                     Partner (..), Stalemate (..),
+                                     TrumpsAndPartner (..))
 
 newtype NumberOfPlayers =
   NumberOfPlayers Int
