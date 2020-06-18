@@ -4,8 +4,8 @@ module Mu.Players where
 
 import           Control.Lens
 import           Control.Monad.State.Lazy
+import           Data.Aeson
 import           Data.Tuple.Homogenous
-import Data.Aeson
 
 class Cycling a where
   successor :: a -> a
@@ -20,8 +20,8 @@ instance ToJSON a => ToJSON (Tuple3 a) where
   toJSON (Tuple3 t) = toJSON t
 
 instance ToJSON NOfThree where
-  toJSON OneOfThree = Number 1
-  toJSON TwoOfThree = Number 2
+  toJSON OneOfThree   = Number 1
+  toJSON TwoOfThree   = Number 2
   toJSON ThreeOfThree = Number 3
 
 threeLens :: NOfThree -> Lens' (Tuple3 a) a
@@ -47,10 +47,10 @@ instance ToJSON a => ToJSON (Tuple4 a) where
   toJSON (Tuple4 t) = toJSON t
 
 instance ToJSON NOfFour where
-  toJSON OneOfFour = Number 1
-  toJSON TwoOfFour = Number 2
+  toJSON OneOfFour   = Number 1
+  toJSON TwoOfFour   = Number 2
   toJSON ThreeOfFour = Number 3
-  toJSON FourOfFour = Number 4
+  toJSON FourOfFour  = Number 4
 
 fourLens :: NOfFour -> Lens' (Tuple4 a) a
 fourLens n = fourIso . l
@@ -74,15 +74,14 @@ data NOfFive
   deriving (Eq, Enum, Show)
 
 instance ToJSON a => ToJSON (Tuple5 a) where
-
   toJSON (Tuple5 t) = toJSON t
 
 instance ToJSON NOfFive where
-  toJSON OneOfFive = Number 1
-  toJSON TwoOfFive = Number 2
+  toJSON OneOfFive   = Number 1
+  toJSON TwoOfFive   = Number 2
   toJSON ThreeOfFive = Number 3
-  toJSON FourOfFive = Number 4
-  toJSON FiveOfFive = Number 5
+  toJSON FourOfFive  = Number 4
+  toJSON FiveOfFive  = Number 5
 
 fiveLens :: NOfFive -> Lens' (Tuple5 a) a
 fiveLens n = fiveIso . l
@@ -111,12 +110,12 @@ instance ToJSON a => ToJSON (Tuple6 a) where
   toJSON (Tuple6 t) = toJSON t
 
 instance ToJSON NOfSix where
-  toJSON OneOfSix = Number 1
-  toJSON TwoOfSix = Number 2
+  toJSON OneOfSix   = Number 1
+  toJSON TwoOfSix   = Number 2
   toJSON ThreeOfSix = Number 3
-  toJSON FourOfSix = Number 4
-  toJSON FiveOfSix = Number 5
-  toJSON SixOfSix = Number 6
+  toJSON FourOfSix  = Number 4
+  toJSON FiveOfSix  = Number 5
+  toJSON SixOfSix   = Number 6
 
 sixLens :: NOfSix -> Lens' (Tuple6 a) a
 sixLens n = sixIso . l

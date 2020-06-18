@@ -27,7 +27,6 @@ import           Mu.Players
 import           Network.WebSockets      (Connection)
 import           Servant.Server          (ServerError (..), err400)
 import           Websockets.Websockets   (receiveJSONOrServerError, sendJSON)
-
 --data BidRequest =
 --  BidRequest [IndexedValue Card]
 --
@@ -83,13 +82,13 @@ import           Websockets.Websockets   (receiveJSONOrServerError, sendJSON)
 --indexedMany :: MonadError Text m => (Map Int a -> m [Int]) -> [a] -> m [a]
 --indexedMany f as = do
 --  is <- f map
---  traverse lookup is 
+--  traverse lookup is
 --  where
 --    lookup i = case Map.lookup i map of
 --      Just a -> return a
 --      Nothing -> throwError $ "no " <> show i
 --    map = indexList as
---  
+--
 --
 --getBidWS ::
 --     (MonadIO m, MonadError ServerError m)

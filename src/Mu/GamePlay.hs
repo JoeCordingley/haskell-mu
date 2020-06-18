@@ -52,27 +52,37 @@ playSetNumberOfRounds num playRound =
   where
     playRoundAndAdd scores = playAndAdd scores playRound
 
-playSetNumberOfRoundsWithUpdate :: (Monad m, Monoid scores) => (ScoreUpdate scores -> m ()) -> Int -> m scores -> m scores
+playSetNumberOfRoundsWithUpdate ::
+     (Monad m, Monoid scores)
+  => (ScoreUpdate scores -> m ())
+  -> Int
+  -> m scores
+  -> m scores
 playSetNumberOfRoundsWithUpdate update num playRound =
   concatM (replicate num playRoundAndAdd) mempty
   where
     playRoundAndAdd scores = playAndAddAndUpdate update scores playRound
 
-data ScoreUpdate scores = ScoreUpdate
-  { roundScores :: scores
-  , runningScores :: scores
-  }
+data ScoreUpdate scores =
+  ScoreUpdate
+    { roundScores   :: scores
+    , runningScores :: scores
+    }
 
 playAndAdd :: (Functor f, Semigroup scores) => scores -> f scores -> f scores
 playAndAdd scores = fmap (scores <>)
 
-playAndAddAndUpdate :: (Monad f, Semigroup scores) => (ScoreUpdate scores -> f ()) -> scores -> f scores -> f scores
+playAndAddAndUpdate ::
+     (Monad f, Semigroup scores)
+  => (ScoreUpdate scores -> f ())
+  -> scores
+  -> f scores
+  -> f scores
 playAndAddAndUpdate update previousScores round = do
   roundScores <- round
   let runningScores = roundScores <> previousScores
   update ScoreUpdate {roundScores, runningScores}
   return runningScores
-
 
 data Stages f players player =
   Stages
@@ -94,18 +104,18 @@ data Dependencies f players player =
     , requestCard       :: player -> [PlayableCard] -> f PlayableCard
     }
 
-data Updates f player scores = 
+data Updates f player scores =
   Updates
-    { dealUpdate :: player -> [Card] -> f () 
+    { dealUpdate          :: player -> [Card] -> f ()
     , biddingResultUpdate :: BiddingResult player -> f ()
-    , trickWinnerUpdate :: WinnerOfTrick player -> f ()
-    , scoresUpdate :: ScoreUpdate scores -> f ()
+    , trickWinnerUpdate   :: WinnerOfTrick player -> f ()
+    , scoresUpdate        :: ScoreUpdate scores -> f ()
     }
 
 gameRound ::
      (Monad f, Functor players)
   => (player -> players CardPositions -> CardPositions)
-  -> Stages f players player 
+  -> Stages f players player
   -> player
   -> f (players Score)
 gameRound f (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay scoreStalemate) firstPlayer = do
@@ -121,7 +131,6 @@ gameRound f (Stages dealCards runBidding settleAuction cardPlay scoreCardPlay sc
       return $ scoreCardPlay chief chiefTrump partner topBid tricks
     Unsuccessful stalemate -> return $ scoreStalemate stalemate
 
-
 playMu ::
      ( Monad m
      , Monoid (players Score)
@@ -130,7 +139,7 @@ playMu ::
      , Functor players
      )
   => (player -> players CardPositions -> CardPositions)
-  -> Stages m players player 
+  -> Stages m players player
   -> EndCondition
   -> player
   -> m (players Score)
@@ -148,12 +157,14 @@ playMuWithUpdate ::
      )
   => (ScoreUpdate (players Score) -> m ())
   -> (player -> players CardPositions -> CardPositions)
-  -> Stages m players player 
+  -> Stages m players player
   -> EndCondition
   -> player
   -> m (players Score)
 playMuWithUpdate update f stages endCondition firstPlayer =
-  evalStateT (playMatchWithUpdate (lift. update) endCondition stateful') firstPlayer
+  evalStateT
+    (playMatchWithUpdate (lift . update) endCondition stateful')
+    firstPlayer
   where
     stateful' = players >>= lift . gameRound f stages
 
@@ -163,7 +174,7 @@ playMatch ::
   -> m (players Score)
   -> m (players Score)
 playMatch (SetNumberOfRounds num) = playSetNumberOfRounds num
-playMatch (ScoreGoal goal)     = playUntilScore goal
+playMatch (ScoreGoal goal)        = playUntilScore goal
 
 playMatchWithUpdate ::
      (Monad m, Monoid (players Score), Foldable1 players)
@@ -171,5 +182,7 @@ playMatchWithUpdate ::
   -> EndCondition
   -> m (players Score)
   -> m (players Score)
-playMatchWithUpdate update (SetNumberOfRounds num) = playSetNumberOfRoundsWithUpdate update num
-playMatchWithUpdate update (ScoreGoal goal)     = playUntilScoreWithUpdate update goal
+playMatchWithUpdate update (SetNumberOfRounds num) =
+  playSetNumberOfRoundsWithUpdate update num
+playMatchWithUpdate update (ScoreGoal goal) =
+  playUntilScoreWithUpdate update goal

@@ -10,8 +10,8 @@ import           Data.Foldable      (find)
 import           Data.List.NonEmpty ((<|))
 import           Data.Monoid        (Endo (..))
 import           Data.Semigroup     (Sum (..))
-import           Mu.Auction         (Chief (..), Stalemate (..), 
-                                     TrumpsAndPartner (..), CardsBid(..), Partner(..))
+import           Mu.Auction         (CardsBid (..), Chief (..), Partner (..),
+                                     Stalemate (..), TrumpsAndPartner (..))
 
 newtype NumberOfPlayers =
   NumberOfPlayers Int

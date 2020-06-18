@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RankNTypes     #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE RankNTypes                 #-}
 
 module Mu.Auction where
 
@@ -9,20 +9,20 @@ import           Control.Lens              hiding ((<.>))
 import           Control.Monad.State.Class
 import           Control.Monad.State.Lazy
 import           Data.Foldable             (toList)
+import           Data.Function.Syntax
 import           Data.Functor.Apply
 import           Data.Functor.Compose
 import           Data.List                 hiding (sortOn)
 import           Data.List.NonEmpty        (NonEmpty (..))
 import qualified Data.List.NonEmpty        as NE
 import           Data.Monoid
+import           Data.Semigroup            (Max (..), getMax)
 import qualified Data.Semigroup            as Semi
 import           Data.Semigroup.Foldable
 import           Data.Tuple.Homogenous
 import           Mu.Players
 import           TupleInstances
 import           Util
-import           Data.Function.Syntax
-import Data.Semigroup (Max(..), getMax)
 
 newtype CardsBid =
   CardsBid Int
@@ -79,7 +79,6 @@ data FinishedBidding players player
   = Successful (SuccessfulBidding players player)
   | Unsuccessful (Stalemate player)
 
-
 newtype Vice player =
   Vice
     { getVice :: player
@@ -130,10 +129,7 @@ runAuction getBid raise numberOfPlayers firstPlayer =
         Raise cards ->
           ((raise player cards, [player]) <>) <$> runAuction' numberOfPlayers
 
-
-evalStatePair s (a,b) = evalStateT (evalStateT s a) b
-
-
+evalStatePair s (a, b) = evalStateT (evalStateT s a) b
 
 tallyAuction ::
      (Eq player, Foldable1 players)
@@ -163,7 +159,8 @@ tallyAuction playerCards =
     playerBids (player, cards) =
       MaxBidders (Semi.Max (CardsBid (length cards))) (player :| [])
 
-newtype MaxRaise = MaxRaise Int
+newtype MaxRaise =
+  MaxRaise Int
 
 playAuction ::
      ( Foldable1 players
@@ -185,7 +182,6 @@ playAuction getBid raise players firstPlayer =
   where
     n = length players
 
-
 playAuctionAndUpdate ::
      ( Foldable1 players
      , Traversable players
@@ -201,11 +197,12 @@ playAuctionAndUpdate ::
   -> players player
   -> player
   -> f (BiddingResult player)
-playAuctionAndUpdate update = update' .*** playAuction where
-  update' fResult = do
-    result <- fResult
-    update result
-    return result
+playAuctionAndUpdate update = update' .*** playAuction
+  where
+    update' fResult = do
+      result <- fResult
+      update result
+      return result
 
 playAuctionAndRecord ::
      ( Foldable1 players
@@ -223,8 +220,9 @@ playAuctionAndRecord ::
   -> player
   -> players [Card]
   -> f (FinishedBidding players player)
-playAuctionAndRecord  = playAuctionAndRecordWithUpdate doNothing where
-  doNothing _ = return ()
+playAuctionAndRecord = playAuctionAndRecordWithUpdate doNothing
+  where
+    doNothing _ = return ()
 
 playAuctionAndRecordWithUpdate ::
      ( Foldable1 players
@@ -245,30 +243,39 @@ playAuctionAndRecordWithUpdate ::
   -> f (FinishedBidding players player)
 playAuctionAndRecordWithUpdate updateResult players l getBid firstPlayer =
   fmap finishBidding .
-  runStateT (playAuctionAndUpdate (lift . updateResult) (StateT . getBidStateful getBid l) raise players firstPlayer) .
-  fmap initialPositions where
+  runStateT
+    (playAuctionAndUpdate
+       (lift . updateResult)
+       (StateT . getBidStateful getBid l)
+       raise
+       players
+       firstPlayer) .
+  fmap initialPositions
+  where
     raise player cards = set (l player) cards mempty
 
-getBidStateful
-  :: (Functor f, Foldable1 players) =>
-     (player ->  MaxRaise -> [Card] -> f Bid)
-     -> (player -> LensLike' (Compose f ((,) Bid)) (players CardPositions) CardPositions)
-     -> player
-     -> (players CardPositions)
-     -> f (Bid, (players CardPositions))
-getBidStateful getBid l player players = getCompose $ (l player) (Compose . getBidAndUpdate player) players where
-  highestBid = getMax $ foldMap1 (Max . length . onTable) players
-  getBidAndUpdate player cardPositions =
-    update cardPositions <$> getBid player maxRaise cards where
-      cards = inHand cardPositions
-      maxRaise = MaxRaise $ maxBid - currentBid
-      maxBid = highestBid + 1
-      currentBid = length $ onTable cardPositions
-  update CardPositions {inHand, onTable} (Raise cards) =
-    ( Raise cards
-    , CardPositions {inHand = minus cards inHand, onTable = cards <> onTable})
-  update cardPositions Pass = (Pass, cardPositions)
-
+getBidStateful ::
+     (Functor f, Foldable1 players)
+  => (player -> MaxRaise -> [Card] -> f Bid)
+  -> (player -> LensLike' (Compose f ((,) Bid)) (players CardPositions) CardPositions)
+  -> player
+  -> (players CardPositions)
+  -> f (Bid, (players CardPositions))
+getBidStateful getBid l player players =
+  getCompose $ (l player) (Compose . getBidAndUpdate player) players
+  where
+    highestBid = getMax $ foldMap1 (Max . length . onTable) players
+    getBidAndUpdate player cardPositions =
+      update cardPositions <$> getBid player maxRaise cards
+      where
+        cards = inHand cardPositions
+        maxRaise = MaxRaise $ maxBid - currentBid
+        maxBid = highestBid + 1
+        currentBid = length $ onTable cardPositions
+    update CardPositions {inHand, onTable} (Raise cards) =
+      ( Raise cards
+      , CardPositions {inHand = minus cards inHand, onTable = cards <> onTable})
+    update cardPositions Pass = (Pass, cardPositions)
 
 bid :: [Card] -> Bid
 bid []    = Pass
@@ -322,11 +329,14 @@ instance (Monoid players, Zeroed bid) => Monoid (MaxBidders players bid) where
 newtype IsMoreThanThreePlayers =
   IsMoreThanThreePlayers Bool
 
-newtype ViceTrump = ViceTrump
-  { getViceTrump :: Trump }
+newtype ViceTrump =
+  ViceTrump
+    { getViceTrump :: Trump
+    }
 
 newtype Partner player =
-  Partner player deriving Eq
+  Partner player
+  deriving (Eq)
 
 data TrumpsAndPartner player =
   TrumpsAndPartner
@@ -346,7 +356,8 @@ settleAuctionRound ::
   -> Maybe (vice, [Card])
   -> m (TrumpsAndPartner player)
 settleAuctionRound (IsMoreThanThreePlayers isMoreThanThreePlayers) getViceTrump getChiefTrump getPartner players (chief, chiefCards) viceAndCards = do
-  viceTrump <- traverse (uncurry getViceTrump . fmap getViceTrumpOptions) viceAndCards
+  viceTrump <-
+    traverse (uncurry getViceTrump . fmap getViceTrumpOptions) viceAndCards
   chiefTrump <- getChiefTrump chief $ getChiefTrumpOptions chiefCards
   partner <-
     if isMoreThanThreePlayers
@@ -355,10 +366,11 @@ settleAuctionRound (IsMoreThanThreePlayers isMoreThanThreePlayers) getViceTrump 
   return TrumpsAndPartner {chiefTrump, viceTrump, partner}
 
 getViceTrumpOptions :: [Card] -> [Trump]
-getViceTrumpOptions cards = nub trumps where
-  trumps = do
-    card <- cards
-    [SuitTrump $ suit card, RankTrump $ rank card]
+getViceTrumpOptions cards = nub trumps
+  where
+    trumps = do
+      card <- cards
+      [SuitTrump $ suit card, RankTrump $ rank card]
 
 getChiefTrumpOptions :: [Card] -> [Trump]
-getChiefTrumpOptions = (NoTrump:) . getViceTrumpOptions
+getChiefTrumpOptions = (NoTrump :) . getViceTrumpOptions

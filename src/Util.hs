@@ -5,13 +5,13 @@ module Util where
 
 import           Control.Applicative.Free (Ap (..), liftAp, runAp)
 import           Control.Lens             hiding ((<.>))
+import           Control.Monad.State.Lazy
+import           Data.Foldable
+import           Data.Functor.Compose
 import           Data.Functor.Identity
-import Data.Map.Lazy (Map)
-import qualified Data.Map.Lazy as Map
-import qualified Data.List.Index         as List
-import Data.Foldable
-import Data.Functor.Compose
-import Control.Monad.State.Lazy
+import qualified Data.List.Index          as List
+import           Data.Map.Lazy            (Map)
+import qualified Data.Map.Lazy            as Map
 
 data Mono x y a where
   Mono :: x -> Mono x y y
@@ -78,20 +78,21 @@ minus = flip $ foldr remove
 indexList :: Foldable t => t a -> Map Int a
 indexList = Map.fromList . List.indexed . toList
 
-composed
-  :: LensLike ( Compose f g ) s t a b -> (a -> f (g b)) -> s -> f (g t)
+composed :: LensLike (Compose f g) s t a b -> (a -> f (g b)) -> s -> f (g t)
 composed l f = getCompose . l (Compose . f)
 
-passThrough :: MonadState s m => LensLike (Compose m ((,) c)) s s a b -> (a -> m (c, b)) -> m c
-passThrough l f = stateT $ getCompose . l (Compose . f) where
-  f' = getCompose . l (Compose . f) 
+passThrough ::
+     MonadState s m
+  => LensLike (Compose m ((,) c)) s s a b
+  -> (a -> m (c, b))
+  -> m c
+passThrough l f = stateT $ getCompose . l (Compose . f)
+  where
+    f' = getCompose . l (Compose . f)
 
-
-stateT :: MonadState s m => (s -> m (a,s)) -> m a
+stateT :: MonadState s m => (s -> m (a, s)) -> m a
 stateT f = do
   s <- get
   (a, s') <- f s
   put s'
   return a
-  
-    

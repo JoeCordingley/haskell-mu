@@ -92,11 +92,7 @@ server stateRef name conn = keepAlive conn commmunication
     broadcastUpdateToUsers n (State users t) =
       traverse_ (broadcastUpdateToUser t n) users
 
-
-keepAlive
-  :: (MonadError e m, MonadIO m) => Connection
-     -> ExceptT e IO c
-     -> m c
+keepAlive :: (MonadError e m, MonadIO m) => Connection -> ExceptT e IO c -> m c
 keepAlive conn =
   liftEither <=< liftIO . withPingThread conn 30 (pure ()) . runExceptT
 
@@ -262,4 +258,3 @@ instance Show NOfThree where
   show OneOfThree   = "1"
   show TwoOfThree   = "2"
   show ThreeOfThree = "3"
-

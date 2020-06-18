@@ -1,11 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module Cards where
 
+import           Data.Aeson
 import           Data.Monoid (Sum)
-import Data.Aeson
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
@@ -90,4 +90,3 @@ data Trump
   | RankTrump Int
   | NoTrump
   deriving (Eq, Show)
-
