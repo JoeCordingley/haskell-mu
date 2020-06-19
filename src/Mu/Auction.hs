@@ -346,12 +346,12 @@ data TrumpsAndPartner player =
     }
 
 settleAuctionRound ::
-     Monad m
+     (Monad m, Foldable players)
   => IsMoreThanThreePlayers
   -> (vice -> [Trump] -> m ViceTrump)
   -> (chief -> [Trump] -> m ChiefTrump)
-  -> (chief -> players -> m (Partner player))
-  -> players
+  -> (chief -> players player -> m (Partner player))
+  -> players player
   -> (chief, [Card])
   -> Maybe (vice, [Card])
   -> m (TrumpsAndPartner player)
@@ -361,7 +361,7 @@ settleAuctionRound (IsMoreThanThreePlayers isMoreThanThreePlayers) getViceTrump 
   chiefTrump <- getChiefTrump chief $ getChiefTrumpOptions chiefCards
   partner <-
     if isMoreThanThreePlayers
-      then fmap Just (getPartner chief players)
+      then fmap Just . getPartner chief $ players
       else return Nothing
   return TrumpsAndPartner {chiefTrump, viceTrump, partner}
 

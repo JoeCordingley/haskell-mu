@@ -6,15 +6,31 @@ import           Control.Lens
 import           Control.Monad.State.Lazy
 import           Data.Aeson
 import           Data.Tuple.Homogenous
+import Data.Foldable
 
 class Cycling a where
   successor :: a -> a
+
+except players player tuple = filtered =<< toList ((,) <$> players <*> tuple) where
+  filtered (player', a) = if player' == player then [] else [a]
+
+getPlayer
+  :: (player -> Getting a players a) -> player -> players -> a
+getPlayer lens player tuple = view (lens player) tuple
 
 data NOfThree
   = OneOfThree
   | TwoOfThree
   | ThreeOfThree
   deriving (Eq, Enum, Show)
+
+exceptThree
+  :: NOfThree -> Tuple3 a -> [a]
+exceptThree = except threePlayers
+
+getThree
+  :: NOfThree -> Tuple3 a -> a
+getThree = getPlayer threeLens
 
 instance ToJSON a => ToJSON (Tuple3 a) where
   toJSON (Tuple3 t) = toJSON t
@@ -42,6 +58,14 @@ data NOfFour
   | ThreeOfFour
   | FourOfFour
   deriving (Eq, Enum, Show)
+
+exceptFour
+  :: NOfFour -> Tuple4 a -> [a]
+exceptFour = except fourPlayers
+
+getFour
+  :: NOfFour -> Tuple4 a -> a
+getFour = getPlayer fourLens
 
 instance ToJSON a => ToJSON (Tuple4 a) where
   toJSON (Tuple4 t) = toJSON t
@@ -72,6 +96,14 @@ data NOfFive
   | FourOfFive
   | FiveOfFive
   deriving (Eq, Enum, Show)
+
+exceptFive
+  :: NOfFive -> Tuple5 a -> [a]
+exceptFive = except fivePlayers
+
+getFive
+  :: NOfFive -> Tuple5 a -> a
+getFive = getPlayer fiveLens
 
 instance ToJSON a => ToJSON (Tuple5 a) where
   toJSON (Tuple5 t) = toJSON t
@@ -105,6 +137,14 @@ data NOfSix
   | FiveOfSix
   | SixOfSix
   deriving (Eq, Enum, Show)
+
+exceptSix
+  :: NOfSix -> Tuple6 a -> [a]
+exceptSix = except sixPlayers
+
+getSix
+  :: NOfSix -> Tuple6 a -> a
+getSix = getPlayer sixLens
 
 instance ToJSON a => ToJSON (Tuple6 a) where
   toJSON (Tuple6 t) = toJSON t
