@@ -19,7 +19,7 @@ import qualified Mu.Scoring                 as Scoring
 
 playMuThreePlayers ::
      (MonadRandom m, Bind m)
-  => Dependencies m Tuple3 NOfThree
+  => Dependencies m NOfThree
   -> EndCondition
   -> m (Tuple3 Score)
 playMuThreePlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition =
@@ -51,7 +51,7 @@ playMuThreePlayers (Dependencies getBid getViceTrump getChiefTrump getPartner ge
 playMuThreePlayersWithUpdates ::
      (MonadRandom m, Bind m)
   => Updates m NOfThree (Tuple3 Score)
-  -> Dependencies m Tuple3 NOfThree
+  -> Dependencies m NOfThree
   -> EndCondition
   -> m (Tuple3 Score)
 playMuThreePlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinnerUpdate scoresUpdate) (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition =
@@ -92,7 +92,7 @@ playMuThreePlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinne
 
 playMuFourPlayers ::
      (MonadRandom m, Bind m)
-  => Dependencies m Tuple4 NOfFour
+  => Dependencies m NOfFour
   -> EndCondition
   -> m (Tuple4 Score)
 playMuFourPlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition =
@@ -124,7 +124,7 @@ playMuFourPlayers (Dependencies getBid getViceTrump getChiefTrump getPartner get
 playMuFourPlayersWithUpdates ::
      (MonadRandom m, Bind m)
   => Updates m NOfFour (Tuple4 Score)
-  -> Dependencies m Tuple4 NOfFour
+  -> Dependencies m NOfFour
   -> EndCondition
   -> m (Tuple4 Score)
 playMuFourPlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinnerUpdate scoresUpdate) (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition =
@@ -165,7 +165,7 @@ playMuFourPlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinner
 
 playMuFivePlayers ::
      (MonadRandom m, Bind m)
-  => Dependencies m Tuple5 NOfFive
+  => Dependencies m NOfFive
   -> EndCondition
   -> m (Tuple5 Score)
 playMuFivePlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition =
@@ -197,7 +197,7 @@ playMuFivePlayers (Dependencies getBid getViceTrump getChiefTrump getPartner get
 playMuFivePlayersWithUpdates ::
      (MonadRandom m, Bind m)
   => Updates m NOfFive (Tuple5 Score)
-  -> Dependencies m Tuple5 NOfFive
+  -> Dependencies m NOfFive
   -> EndCondition
   -> m (Tuple5 Score)
 playMuFivePlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinnerUpdate scoresUpdate) (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition =
@@ -238,7 +238,7 @@ playMuFivePlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinner
 
 playMuSixPlayers ::
      (MonadRandom m, Bind m)
-  => Dependencies m Tuple6 NOfSix
+  => Dependencies m NOfSix
   -> EndCondition
   -> m (Tuple6 Score)
 playMuSixPlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition =
@@ -270,7 +270,7 @@ playMuSixPlayers (Dependencies getBid getViceTrump getChiefTrump getPartner getC
 playMuSixPlayersWithUpdates ::
      (MonadRandom m, Bind m)
   => Updates m NOfSix (Tuple6 Score)
-  -> Dependencies m Tuple6 NOfSix
+  -> Dependencies m NOfSix
   -> EndCondition
   -> m (Tuple6 Score)
 playMuSixPlayersWithUpdates (Updates dealUpdate biddingResultUpdate trickWinnerUpdate scoresUpdate) (Dependencies getBid getViceTrump getChiefTrump getPartner getCard) endCondition =

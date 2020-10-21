@@ -7,21 +7,22 @@ module Mu.WebsocketTry where
 import           Control.Monad.Except
 import           Control.Monad.State.Lazy
 import           Mu.GamePlay              (EndCondition (..))
+import           Mu.Players
+import qualified Mu.SinglePlayer          as SinglePlayer
 import           Network.Wai.Handler.Warp (run)
 import           Network.WebSockets       (Connection)
 import           Servant
 import           Servant.API.WebSocket    (WebSocket)
 import           Servant.Server           (ServerError)
 import           Websockets.Websockets    (keepAlive)
-import qualified Mu.SinglePlayer as SinglePlayer
-import Mu.Players
 
 threePlayerTwoRounds ::
      (MonadIO m, MonadError ServerError m) => Connection -> m ()
 threePlayerTwoRounds conn = keepAlive conn play
   where
     play = do
-      score <- SinglePlayer.playMuThreePlayers OneOfThree conn (SetNumberOfRounds 2)
+      score <-
+        SinglePlayer.playMuThreePlayers OneOfThree conn (SetNumberOfRounds 2)
       return ()
 
 fourPlayerTwoRounds ::
@@ -29,7 +30,8 @@ fourPlayerTwoRounds ::
 fourPlayerTwoRounds conn = keepAlive conn play
   where
     play = do
-      score <- SinglePlayer.playMuFourPlayers OneOfFour conn (SetNumberOfRounds 2)
+      score <-
+        SinglePlayer.playMuFourPlayers OneOfFour conn (SetNumberOfRounds 2)
       return ()
 
 type TestApi = "trythree" :> WebSocket :<|> "tryFour" :> WebSocket
@@ -44,4 +46,3 @@ main = do
 
 app :: Application
 app = serve api (threePlayerTwoRounds :<|> fourPlayerTwoRounds)
-

@@ -41,8 +41,7 @@ requestPartner ::
      (MonadRandom m, Foldable players) => players player -> m (Partner player)
 requestPartner = fmap Partner . uniform
 
-singularDependencies ::
-     (MonadRandom m, Foldable players) => SingularDependencies m players player
+singularDependencies :: MonadRandom m => SingularDependencies m player
 singularDependencies =
   SingularDependencies
     { requestBidSingular = requestBid

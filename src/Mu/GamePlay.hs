@@ -96,21 +96,21 @@ data Stages f players player =
     , scoreStalemate :: Stalemate player -> players Score
     }
 
-data Dependencies f players player =
+data Dependencies f player =
   Dependencies
     { requestBid        :: player -> MaxRaise -> [Card] -> f Bid
     , requestViceTrump  :: Vice player -> [Trump] -> f ViceTrump
     , requestChiefTrump :: Chief player -> [Trump] -> f ChiefTrump
-    , requestPartner    :: Chief player -> players player -> f (Partner player)
+    , requestPartner    :: Chief player -> [player] -> f (Partner player)
     , requestCard       :: player -> [PlayableCard] -> f PlayableCard
     }
 
-data SingularDependencies f players player =
+data SingularDependencies f player =
   SingularDependencies
     { requestBidSingular        :: MaxRaise -> [Card] -> f Bid
     , requestViceTrumpSingular  :: [Trump] -> f ViceTrump
     , requestChiefTrumpSingular :: [Trump] -> f ChiefTrump
-    , requestPartnerSingular    :: players player -> f (Partner player)
+    , requestPartnerSingular    :: [player] -> f (Partner player)
     , requestCardSingular       :: [PlayableCard] -> f PlayableCard
     }
 
@@ -126,10 +126,10 @@ data MoveUpdates f player =
 dependencies ::
      (Foldable t, Monad f)
   => (player -> moveUpdates -> t (MoveUpdates f player))
-  -> (player -> singularDependencies -> SingularDependencies f players player)
+  -> (player -> singularDependencies -> SingularDependencies f player)
   -> singularDependencies
   -> moveUpdates
-  -> Dependencies f players player
+  -> Dependencies f player
 dependencies except isPlayer singularDependencies moveUpdates =
   Dependencies
     { requestBid

@@ -346,22 +346,26 @@ data TrumpsAndPartner player =
     }
 
 settleAuctionRound ::
-     (Monad m, Foldable players)
+     (Monad m, Foldable players, Eq player)
   => IsMoreThanThreePlayers
-  -> (vice -> [Trump] -> m ViceTrump)
-  -> (chief -> [Trump] -> m ChiefTrump)
-  -> (chief -> players player -> m (Partner player))
+  -> (Vice player -> [Trump] -> m ViceTrump)
+  -> (Chief player -> [Trump] -> m ChiefTrump)
+  -> (Chief player -> [player] -> m (Partner player))
   -> players player
-  -> (chief, [Card])
-  -> Maybe (vice, [Card])
+  -> (Chief player, [Card])
+  -> Maybe (Vice player, [Card])
   -> m (TrumpsAndPartner player)
 settleAuctionRound (IsMoreThanThreePlayers isMoreThanThreePlayers) getViceTrump getChiefTrump getPartner players (chief, chiefCards) viceAndCards = do
   viceTrump <-
     traverse (uncurry getViceTrump . fmap getViceTrumpOptions) viceAndCards
   chiefTrump <- getChiefTrump chief $ getChiefTrumpOptions chiefCards
+  let vice = fmap (getVice . fst) viceAndCards
   partner <-
     if isMoreThanThreePlayers
-      then fmap Just . getPartner chief $ players
+      then fmap Just .
+           getPartner chief .
+           filter (\p -> getChief chief /= p && all (p /=) vice) $
+           toList players
       else return Nothing
   return TrumpsAndPartner {chiefTrump, viceTrump, partner}
 
