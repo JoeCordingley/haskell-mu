@@ -54,7 +54,7 @@ dependencies:
 
 
 library:
-  source-dirs: src
+  source-dirs: src/haskell
 
 executables:
   mu-exe:
@@ -70,7 +70,7 @@ executables:
 tests:
   mu-test:
     main:                Spec.hs
-    source-dirs:         test
+    source-dirs:         test/haskell
     ghc-options:
     - -threaded
     - -rtsopts
