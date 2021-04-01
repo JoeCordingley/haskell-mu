@@ -3,3 +3,6 @@ mu.cabal
 output/
 .spago/
 *~
+index.js
+.psci_modules/
+.psc-ide-port
